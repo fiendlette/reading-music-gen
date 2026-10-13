@@ -1,0 +1,2147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Aggrotech generator</title>
+<style>
+:root {
+  --bg: #e4e5e1;
+  --panel: #f1f2ee;
+  --ink: #141617;
+  --muted: #5a5f61;
+  --line: #b9bdb8;
+  --accent: #4f7d00;
+  --accent-ink: #ffffff;
+  --hot: #c42a12;
+  --track: #c9ccc6;
+  --stripe: rgba(20, 22, 23, 0.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0c0d;
+    --panel: #141618;
+    --ink: #dfe3e0;
+    --muted: #8b928e;
+    --line: #2a2e30;
+    --accent: #a6ff3a;
+    --accent-ink: #0b0c0d;
+    --hot: #ff4a2a;
+    --track: #2a2e30;
+    --stripe: rgba(166, 255, 58, 0.05);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0c0d;
+  --panel: #141618;
+  --ink: #dfe3e0;
+  --muted: #8b928e;
+  --line: #2a2e30;
+  --accent: #a6ff3a;
+  --accent-ink: #0b0c0d;
+  --hot: #ff4a2a;
+  --track: #2a2e30;
+  --stripe: rgba(166, 255, 58, 0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "JetBrains Mono", "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", ui-monospace, monospace;
+  font-size: 15px;
+  line-height: 1.5;
+}
+main {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 2rem 16px 3rem;
+}
+
+/* Header */
+.top {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+.top::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 6px;
+  background: repeating-linear-gradient(-45deg, var(--hot) 0 8px, transparent 8px 16px);
+  opacity: 0.8;
+}
+.kicker {
+  margin: 0 0 0.3rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  margin: 0;
+  font-family: Impact, "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900;
+  font-size: clamp(2.2rem, 8vw, 4.2rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.lede { margin: 0.6rem 0 0; color: var(--muted); max-width: 40rem; }
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hint { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
+.help { color: var(--muted); font-size: 0.82rem; margin: 0.6rem 0 0; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Buttons and inputs */
+button, input[type="text"], select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.55rem 0.85rem;
+  min-height: 2.5rem;
+}
+button { cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.8rem; font-weight: 700; }
+button:hover { border-color: var(--ink); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.quiet { background: transparent; font-weight: 400; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="text"] { min-width: 0; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 1.6rem;
+  background: transparent;
+  margin: 0;
+}
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--track); }
+input[type="range"]::-moz-range-track { height: 4px; background: var(--track); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 22px;
+  margin-top: -9px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  border-radius: 1px;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px; height: 20px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  border-radius: 1px;
+}
+
+/* Transport */
+.deck {
+  display: grid;
+  grid-template-columns: auto auto minmax(10rem, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+  margin: 1.75rem 0 1rem;
+}
+.play {
+  min-width: 8rem;
+  min-height: 3.2rem;
+  font-size: 1rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.play[aria-pressed="true"] { background: var(--hot); border-color: var(--hot); color: #fff; }
+.new { min-height: 3.2rem; }
+
+/* Status */
+.status {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 1rem;
+  background-image: repeating-linear-gradient(0deg, var(--stripe) 0 1px, transparent 1px 4px);
+}
+.status-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; }
+.section-name {
+  font-family: Impact, "Arial Narrow", Arial, sans-serif;
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-width: 6ch;
+}
+body[data-section="drop"].playing .section-name { color: var(--hot); }
+.barinfo, .keyinfo { color: var(--muted); font-size: 0.82rem; }
+.keyinfo { margin-left: auto; }
+.steps { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; margin: 0.6rem 0; }
+.steps span { height: 8px; background: var(--track); }
+.steps span.beat { background: color-mix(in srgb, var(--track), var(--ink) 18%); }
+.steps span.on { background: var(--accent); }
+.scope { display: block; width: 100%; height: 56px; }
+
+/* Seed */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 0.9rem;
+}
+.seed-panel { margin-bottom: 1rem; }
+.seed-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.seed-row label { font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; }
+#seed { flex: 1 1 14rem; letter-spacing: 0.1em; font-weight: 700; }
+.locks { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.8rem; }
+.locks-label { color: var(--muted); font-size: 0.82rem; margin-right: 0.25rem; }
+.lock::before { content: "○ "; }
+.lock[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.lock[aria-pressed="true"]::before { content: "● "; color: var(--accent); }
+
+/* Sliders */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.25rem 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+}
+.ctl { padding: 0.35rem 0; }
+.ctl-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }
+.ctl-head label { font-weight: 700; font-size: 0.85rem; }
+.ctl-head output { color: var(--accent); font-size: 0.85rem; text-align: right; white-space: nowrap; }
+.vol .ctl-head label { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; }
+
+/* Lower panels */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+.fav-form { display: flex; gap: 0.5rem; }
+.fav-form input { flex: 1; }
+.fav-list { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+.fav-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas: "name recall del" "seed recall del";
+  gap: 0 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+.fav-list li.empty { display: block; color: var(--muted); font-size: 0.85rem; }
+.fav-name { grid-area: name; font-weight: 700; overflow-wrap: anywhere; }
+.fav-seed { grid-area: seed; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.06em; }
+.fav-list button { min-height: 2.2rem; padding: 0.35rem 0.6rem; }
+.fav-list button:first-of-type { grid-area: recall; }
+.fav-list button.quiet { grid-area: del; }
+#vocalStatus { margin-bottom: 0.6rem; }
+.vocal-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.vocal-opts { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; margin-top: 0.4rem; }
+.vocal-opts > label:first-child { font-weight: 700; font-size: 0.85rem; }
+.check { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; }
+.check input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+
+.foot { margin-top: 2rem; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--line); padding-top: 0.8rem; }
+
+@media (max-width: 560px) {
+  .deck { grid-template-columns: 1fr 1fr; }
+  .vol { grid-column: 1 / -1; }
+  .keyinfo { margin-left: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <p class="kicker">Harsh electronic body music · made live in your browser</p>
+    <h1>Aggrotech generator</h1>
+    <p class="lede">Endless, original, and generated from a seed: the same seed always brings the same track back.</p>
+  </header>
+
+  <section class="deck" aria-label="Playback">
+    <button id="play" class="play" type="button" aria-pressed="false">Play</button>
+    <button id="newTrack" class="new" type="button">New track</button>
+    <div class="vol">
+      <div class="ctl-head"><label for="volume">Volume</label><output id="o-volume" for="volume"></output></div>
+      <input type="range" id="volume" min="0" max="100" step="1">
+    </div>
+  </section>
+
+  <section class="status" aria-label="Now playing">
+    <div class="status-row">
+      <span id="section" class="section-name" aria-live="polite">Stopped</span>
+      <span id="barinfo" class="barinfo"></span>
+      <span id="keyinfo" class="keyinfo"></span>
+    </div>
+    <div id="steps" class="steps" aria-hidden="true"></div>
+    <canvas id="scope" class="scope" aria-hidden="true"></canvas>
+  </section>
+
+  <section class="panel seed-panel" aria-label="Seed and locks">
+    <form id="seedForm" class="seed-row">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" spellcheck="false" autocomplete="off" aria-describedby="seedHelp">
+      <button type="submit">Load seed</button>
+      <button type="button" id="copySeed" class="quiet">Copy</button>
+    </form>
+    <p id="seedHelp" class="help">Type any seed (or any word) and press Load seed. New track rerolls the music but leaves Aggression, Sidechain, Section length, and Volume as you set them.</p>
+    <div class="locks" role="group" aria-label="Keep these parts when you press New track">
+      <span class="locks-label">Keep on New track:</span>
+      <button type="button" class="lock" id="lock-drums" aria-pressed="false">Drums</button>
+      <button type="button" class="lock" id="lock-bass" aria-pressed="false">Bass</button>
+      <button type="button" class="lock" id="lock-lead" aria-pressed="false">Lead</button>
+    </div>
+  </section>
+
+  <section id="controls" class="controls" aria-label="Sound controls"></section>
+
+  <div class="panels">
+    <section class="panel" aria-labelledby="favTitle">
+      <h2 id="favTitle">Favorites</h2>
+      <form id="favForm" class="fav-form">
+        <label for="favName" class="visually-hidden">Name</label>
+        <input id="favName" type="text" maxlength="60" placeholder="Name this one">
+        <button type="submit">Save</button>
+      </form>
+      <ul id="favList" class="fav-list"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="exportTitle">
+      <h2 id="exportTitle">Save audio</h2>
+      <button id="export" type="button">Save 30 seconds as WAV</button>
+      <p id="exportStatus" class="help" aria-live="polite">While playing, it starts from the current section. When stopped, it starts from the first build, so a drop is included.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="vocalTitle">
+      <h2 id="vocalTitle">Your vocals <span class="hint">optional</span></h2>
+      <p class="help">Load your own shouts or vocal samples. They stay on this computer; nothing is uploaded, and they're forgotten when you close the page.</p>
+      <div class="vocal-buttons">
+        <button id="loadVocals" type="button">Load vocal files</button>
+        <button id="clearVocals" type="button" class="quiet">Clear</button>
+        <input id="vocalFiles" type="file" accept="audio/*" multiple hidden>
+      </div>
+      <p id="vocalStatus" class="help" aria-live="polite"></p>
+      <div class="ctl">
+        <div class="ctl-head"><label for="vocalLevel">Vocal level</label><output id="o-vocalLevel" for="vocalLevel"></output></div>
+        <input type="range" id="vocalLevel" min="0" max="100" step="1">
+      </div>
+      <div class="vocal-opts">
+        <label for="vocalEvery">How often</label>
+        <select id="vocalEvery">
+          <option value="1">Every bar</option>
+          <option value="2">Every 2 bars</option>
+          <option value="4">Every 4 bars</option>
+          <option value="8">Every 8 bars</option>
+        </select>
+        <label class="check"><input type="checkbox" id="vocalDistort"> Distort</label>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <p>Synthesized in the browser, so it's demo-grade next to a produced track. A limiter on the output keeps it from spiking. Settings and favorites are saved in this browser only.</p>
+  </footer>
+</main>
+<script>
+(() => {
+'use strict';
+// ---- rng.js ----
+// Seeded randomness. Everything random in a track comes from here, so the
+// same seed always gives the same track.
+//
+// A seed looks like "H4KQ-D9TX-B2MN-L7PW": four parts, one each for
+// harmony (key, scale, chords, tempo), drums, bass, and lead. Keeping the
+// parts separate is what lets the lock toggles keep one part while the rest
+// rerolls.
+
+const SEED_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const SEED_PARTS = ['harmony', 'drums', 'bass', 'lead'];
+
+// FNV-1a: turns any string into a 32-bit number.
+function hashString(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+// mulberry32: small, fast, good enough for music.
+function mulberry32(a) {
+  return function () {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeRng(...parts) {
+  const r = mulberry32(hashString(parts.join('|')));
+  return {
+    next: r,
+    range: (a, b) => a + (b - a) * r(),
+    int: (a, b) => a + Math.floor(r() * (b - a + 1)),
+    pick: (arr) => arr[Math.floor(r() * arr.length)],
+    chance: (p) => r() < p,
+    // pairs: [[value, weight], ...]
+    weighted(pairs) {
+      const total = pairs.reduce((s, p) => s + p[1], 0);
+      let x = r() * total;
+      for (const [v, w] of pairs) {
+        if ((x -= w) < 0) return v;
+      }
+      return pairs[pairs.length - 1][0];
+    },
+    shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    },
+  };
+}
+
+// A fixed number in [0, 1) for a given key. Used for per-hit variation
+// (velocity, noise offsets) so the WAV export is repeatable too.
+function hash01(...parts) {
+  return hashString(parts.join('|')) / 4294967296;
+}
+
+function randomSeedPart() {
+  const bytes = new Uint8Array(4);
+  if (globalThis.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+  else for (let i = 0; i < 4; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (b) => SEED_ALPHABET[b % SEED_ALPHABET.length]).join('');
+}
+
+function newSeed() {
+  return SEED_PARTS.map(randomSeedPart).join('-');
+}
+
+// Accepts a proper seed in any case and with any separators. Anything else
+// (a word, a name) is turned into a proper seed by hashing, so any text works.
+function normalizeSeed(text) {
+  const clean = String(text || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!clean) return null;
+  const valid = clean.length === 16 && [...clean].every((ch) => SEED_ALPHABET.includes(ch));
+  if (valid) return clean.match(/.{4}/g).join('-');
+  const r = makeRng('seed-from-text', clean);
+  return SEED_PARTS.map(() =>
+    Array.from({ length: 4 }, () => SEED_ALPHABET[Math.floor(r.next() * SEED_ALPHABET.length)]).join('')
+  ).join('-');
+}
+
+// ---- theory.js ----
+// Scales and chords. The Darkness slider picks the mode; riffs are stored as
+// scale steps, so they follow whatever mode is chosen.
+
+const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+
+// Ordered roughly from least to most dark.
+const MODES = [
+  { name: 'Natural minor', steps: [0, 2, 3, 5, 7, 8, 10] },
+  { name: 'Harmonic minor', steps: [0, 2, 3, 5, 7, 8, 11] },
+  { name: 'Phrygian', steps: [0, 1, 3, 5, 7, 8, 10] },
+  { name: 'Phrygian dominant', steps: [0, 1, 4, 5, 7, 8, 10] },
+  { name: 'Locrian', steps: [0, 1, 3, 5, 6, 8, 10] },
+];
+
+// Chords (other than the home chord) that suit each mode, by scale step
+// counted from 0.
+const PROGRESSION_POOLS = [
+  [5, 6, 3, 4], // natural minor: VI, VII, iv, v
+  [5, 4, 3, 6], // harmonic minor: VI, V, iv, VII
+  [1, 6, 3, 5], // Phrygian: II, vii, iv, VI
+  [1, 6, 3, 4], // Phrygian dominant: II, vii, iv, v
+  [1, 5, 6, 3], // Locrian: II, VI, vii, iv
+];
+
+// Semitones above the key's root for a scale step (any integer; wraps by octave).
+function degreeSemis(mode, deg) {
+  const o = Math.floor(deg / 7);
+  const i = ((deg % 7) + 7) % 7;
+  return mode.steps[i] + 12 * o;
+}
+
+// Three-note chord on a scale step, as semitones above the key's root.
+function triad(mode, deg) {
+  return [deg, deg + 2, deg + 4].map((d) => degreeSemis(mode, d));
+}
+
+function midiToHz(m) {
+  return 440 * Math.pow(2, (m - 69) / 12);
+}
+
+// ---- track.js ----
+// Turns a seed into a track: the key and chords, the drum kit and patterns,
+// the bass line and sound, and the lead riffs and sounds. Original material
+// built from the genre's traits; nothing here copies a real song.
+
+// Bass patterns, one per position of the Bass pattern slider. `note(step,
+// bar, track)` returns {deg, oct, len} or null for a rest. Steps are 16th
+// notes, 0-15 in a bar; most patterns rest on the kick so the bass sits
+// under it rather than on top of it.
+const BASS_PATTERNS = [
+  { name: 'Rolling 16ths', note: (s) => (s % 4 === 0 ? null : { deg: 0, oct: 0, len: 1 }) },
+  { name: 'Offbeat 8ths', note: (s) => (s % 4 === 2 ? { deg: 0, oct: 0, len: 2 } : null) },
+  { name: 'Octave bounce', note: (s) => (s % 4 === 0 ? null : { deg: 0, oct: s % 4 === 2 ? 12 : 0, len: 1 }) },
+  { name: 'Gallop', note: (s) => (s % 4 >= 2 ? { deg: 0, oct: s % 4 === 3 ? 12 : 0, len: 1 } : null) },
+  { name: 'Riff', note: (s, bar, tr) => tr.bass.riff[(bar % 2) * 16 + s] },
+];
+
+function generateTrack(seed) {
+  const [hs, ds, bs, ls] = seed.split('-');
+  return {
+    seed,
+    harmony: genHarmony(hs),
+    drums: genDrums(ds),
+    bass: genBass(bs),
+    lead: genLead(ls),
+  };
+}
+
+function genHarmony(key) {
+  const r = makeRng('harmony', key);
+  const rootPc = r.int(0, 11);
+  const darkness = r.weighted([[0, 3], [1, 3], [2, 3], [3, 1.5], [4, 0.6]]);
+  const tempo = r.int(134, 148);
+  const chosen = r.shuffle(PROGRESSION_POOLS[darkness]);
+  // Shapes favour staying on the home chord: short repeating riffs, not
+  // wandering harmony.
+  const shape = r.pick([
+    [0, 0, 1, 2],
+    [0, 1, 0, 2],
+    [0, 1, 2, 3],
+    [0, 0, 0, 1],
+    [0, 1, 0, 1],
+    [0, 0, 1, 1],
+  ]);
+  const prog = shape.map((k) => (k === 0 ? 0 : chosen[k - 1]));
+  return { rootPc, darkness, tempo, prog };
+}
+
+function genDrums(key) {
+  const r = makeRng('drums', key);
+  const perc = [];
+  const percDensity = r.range(0.12, 0.3);
+  for (let s = 0; s < 16; s++) perc.push(s % 4 !== 0 && r.chance(percDensity));
+  return {
+    kick: {
+      pStart: r.range(150, 230), // pitch at the hit, in hertz
+      pTime: r.range(0.03, 0.065), // how fast it drops
+      decay: r.range(0.17, 0.3),
+      click: r.range(0.25, 0.7),
+      grit: r.range(0, 1),
+    },
+    clap: {
+      tone: r.range(1100, 2200),
+      decay: r.range(0.12, 0.24),
+      body: r.range(0.1, 0.6),
+      verb: r.range(0.25, 0.5),
+    },
+    hat: {
+      tone: r.range(6500, 9500),
+      decay: r.range(0.022, 0.05),
+      accents: Array.from({ length: 16 }, (_, i) => (i % 4 === 2 ? 1 : r.range(0.35, 0.8))),
+    },
+    openHats: r.pick([[2, 6, 10, 14], [6, 14], [2, 10], [2, 6, 10, 14, 15]]),
+    ghostKicks: r.pick([[14], [15], [10], [7, 15], [13]]),
+    perc: { type: r.pick(['zap', 'metal']), steps: perc, pitch: r.range(0.8, 1.3) },
+    fill: r.pick(['16ths', '8ths-then-16ths']),
+    suggestedIntensity: r.int(45, 80),
+  };
+}
+
+function genBass(key) {
+  const r = makeRng('bass', key);
+  const density = r.range(0.55, 0.85);
+  const riff = [];
+  for (let i = 0; i < 32; i++) {
+    const s = i % 16;
+    if (s % 4 === 0 && r.chance(0.85)) riff.push(null);
+    else if (r.chance(density)) {
+      riff.push({
+        deg: r.weighted([[0, 7], [4, 1.2], [2, 0.6], [-1, 0.4]]),
+        oct: r.chance(0.25) ? 12 : 0,
+        len: r.chance(0.2) ? 2 : 1,
+      });
+    } else riff.push(null);
+  }
+  if (!riff.some(Boolean)) riff[2] = { deg: 0, oct: 0, len: 1 };
+  return {
+    riff,
+    sound: {
+      detune: r.range(4, 14), // cents between the two saws
+      cutoff: r.range(260, 600), // filter resting point, hertz
+      env: r.range(900, 2400), // how far the filter opens on each note
+      q: r.range(3, 8), // filter resonance
+      decay: r.range(0.07, 0.17),
+      sub: r.chance(0.5),
+    },
+    turnaround: r.chance(0.6),
+    suggestedPattern: r.weighted([[0, 3], [1, 1.5], [2, 2.5], [3, 1.5], [4, 2.5]]),
+  };
+}
+
+// Stab gate: which 16ths the supersaw chord plays on (trance-style chop).
+function makeGate(r) {
+  const dens = r.range(0.45, 0.7);
+  const g = [];
+  for (let s = 0; s < 16; s++) {
+    const on = s === 0 || (s % 4 === 0 ? r.chance(0.7) : r.chance(dens * (s % 2 ? 0.8 : 1)));
+    g.push(on ? { len: 1, accent: s % 4 === 0 || r.chance(0.3), inv: r.chance(0.15) ? 1 : 0 } : null);
+  }
+  // Merge some neighbours into longer stabs.
+  for (let s = 0; s < 15; s++) {
+    if (g[s] && !g[s + 1] && r.chance(0.35)) g[s].len = 2;
+  }
+  return g;
+}
+
+function mutateGate(gate, r, amount) {
+  return gate.map((cell, s) => {
+    if (s === 0 || !r.chance(amount)) return cell ? { ...cell } : null;
+    return cell ? null : { len: 1, accent: r.chance(0.4), inv: 0 };
+  });
+}
+
+// Hoover riff: a one-bar motif, repeated with a changed ending.
+function makeHooverBar(r) {
+  const notes = [];
+  let t = 0;
+  while (t < 16) {
+    const len = r.pick([2, 2, 3, 4, 6]);
+    if (t === 0 || r.chance(0.7)) {
+      notes.push({ step: t, len: Math.min(len, 16 - t), deg: r.weighted([[0, 4], [2, 2], [4, 2], [7, 1.2], [-2, 0.8], [1, 0.6]]) });
+    }
+    t += len;
+  }
+  return notes;
+}
+
+function hooverVariant(bar, r, amount) {
+  const second = bar.map((n) => ({ ...n }));
+  const last = second[second.length - 1];
+  last.deg = r.pick([4, 7, -2, 2, 1]);
+  const first = bar.map((n) => ({ ...n, deg: r.chance(amount) ? n.deg + r.pick([-1, 1, 2]) : n.deg }));
+  return [...first, ...second.map((n) => ({ ...n, step: n.step + 16 }))];
+}
+
+// Index notes by step so the scheduler can look them up quickly.
+function indexByStep(notes) {
+  const map = new Array(32).fill(null);
+  for (const n of notes) map[n.step] = n;
+  return map;
+}
+
+function genLead(key) {
+  const r = makeRng('lead', key);
+  const gate = makeGate(r);
+  const stabVariants = [0, 0.12, 0.25].map((amt) => [...mutateGate(gate, r, amt), ...mutateGate(gate, r, amt + 0.1)]);
+  const motif = makeHooverBar(r);
+  const hooverVariants = [0, 0.2, 0.4].map((amt) => indexByStep(hooverVariant(motif, r, amt)));
+  return {
+    stabVariants,
+    hooverVariants,
+    stab: {
+      detune: r.range(12, 28), // cents of spread across the five saws
+      decay: r.range(0.08, 0.2),
+      cutoff: r.range(2600, 5500),
+    },
+    hoover: {
+      detune: r.range(14, 30),
+      bend: r.range(2, 5), // semitones it swoops up from
+      glide: r.range(0.03, 0.09),
+      dive: r.chance(0.6), // pitch drop on release
+    },
+    delayMix: r.range(0.08, 0.22),
+    suggestedBlend: r.int(20, 80),
+  };
+}
+
+// ---- engine.js ----
+// The sound engine. Works on a live AudioContext (playback) and on an
+// OfflineAudioContext (the WAV export) with the same code: `playStep`
+// schedules everything for one 16th note, and either a timer (live) or a
+// loop (export) walks through the steps.
+
+// The arrangement cycles: intro, build, drop, break, build, drop, then back to
+// the break, with new riff variations each time round.
+const ARRANGEMENT = ['intro', 'build', 'drop', 'break', 'build', 'drop'];
+const LOOP_FROM = 3;
+const CEILING = 0.89; // about -1 dB: the loudest the output can ever get
+const LIMIT_DB = -4; // where the limiter starts holding peaks down
+const LIMIT_RATIO = 20;
+// Mix balance, set by measuring with aggro/test/levels.mjs.
+const MIX_LEVEL = 0.38;
+const DRUM_LEVEL = 2;
+const SYNTH_LEVEL = 1;
+const PAD_LEVEL = 0.5;
+// The Web Audio compressor adds its own make-up gain (part of the standard);
+// this undoes it so the limiter only ever turns things down.
+const LIMIT_TRIM = Math.pow(Math.pow(10, (LIMIT_DB - LIMIT_DB / LIMIT_RATIO) / 20), 0.6);
+
+function sectionBars(name, len) {
+  return name === 'drop' ? len : Math.max(4, Math.round(len / 2));
+}
+
+function initialState(sec, cycle, dropNo, settings) {
+  const name = ARRANGEMENT[sec];
+  return {
+    sec,
+    cycle,
+    bar: 0,
+    step: 0,
+    abs: 0,
+    bars: sectionBars(name, settings.sectionLen),
+    dropNo: dropNo + (name === 'drop' ? 1 : 0),
+  };
+}
+
+// Volume slider (0-100) to gain, curved so the middle is moderate.
+function volumeGain(v) {
+  return Math.pow(v / 100, 1.6);
+}
+
+function makeNoiseBuffer(ctx, seconds, key) {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  const r = mulberry32(hashString(key));
+  for (let i = 0; i < len; i++) d[i] = r() * 2 - 1;
+  return buf;
+}
+
+function makeImpulse(ctx, seconds, key) {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    const r = mulberry32(hashString(key + ch));
+    for (let i = 0; i < len; i++) {
+      const x = i / len;
+      d[i] = (r() * 2 - 1) * Math.pow(1 - x, 3.2) * (i < 200 ? i / 200 : 1);
+    }
+  }
+  return buf;
+}
+
+// Saturation curve. amount 0..1, from gentle warmth to hard clipping.
+function driveK(amount) {
+  return 1 + amount * 22;
+}
+function driveCurve(amount) {
+  const n = 2048;
+  const k = driveK(amount);
+  const norm = Math.tanh(k);
+  const c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    c[i] = Math.tanh(k * x) / norm;
+  }
+  return c;
+}
+
+// Gain after a drive stage so turning up Aggression mostly adds grit rather
+// than volume: undoes most of the curve's boost to quiet signals.
+// strength 0..1: how much of that boost to undo.
+function driveMakeup(amount, strength) {
+  const k = driveK(amount);
+  return Math.pow(k / Math.tanh(k), -strength);
+}
+
+// Bitcrush: rounds the wave to a few levels.
+function crushCurve(bits) {
+  const n = 4096;
+  const half = Math.pow(2, bits) / 2;
+  const c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    c[i] = Math.round(x * half) / half;
+  }
+  return c;
+}
+
+// Final safety: straight below the knee, then bends smoothly into CEILING.
+function ceilingCurve(ceiling) {
+  const n = 4096;
+  const knee = ceiling * 0.75;
+  const c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    const y = a <= knee ? a : knee + (ceiling - knee) * Math.tanh((a - knee) / (ceiling - knee));
+    c[i] = Math.sign(x) * y;
+  }
+  return c;
+}
+
+class Engine {
+  constructor(ctx, settings, track, vocals) {
+    this.ctx = ctx;
+    this.s = settings; // shared with the page, so slider moves show up here
+    this.track = track;
+    this.pendingTrack = null; // swapped in at the next bar line
+    this.vocals = vocals || [];
+    this.onStep = null;
+    this.timer = null;
+    this.running = false;
+    this.lastHoover = null;
+    this.noise = makeNoiseBuffer(ctx, 2, 'aggro-noise');
+    this._cache = {};
+    this._sawCache = new Map();
+    this._build();
+    this._trackChanged();
+  }
+
+  _gain(v = 1) {
+    const g = this.ctx.createGain();
+    g.gain.value = v;
+    return g;
+  }
+
+  _shaper() {
+    const w = this.ctx.createWaveShaper();
+    w.oversample = '2x';
+    return w;
+  }
+
+  _filter(type, freq, q = 0.7) {
+    const f = this.ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    return f;
+  }
+
+  _build() {
+    const c = this.ctx;
+
+    // Output chain: mix → low cut → limiter → ceiling → volume → speakers.
+    this.mix = this._gain(MIX_LEVEL);
+    this.lowcut = this._filter('highpass', 30);
+    this.limiter = c.createDynamicsCompressor();
+    this.limiter.threshold.value = LIMIT_DB;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = LIMIT_RATIO;
+    this.limiter.attack.value = 0.002;
+    this.limiter.release.value = 0.15;
+    this.limitTrim = this._gain(LIMIT_TRIM);
+    // No oversampling here: its smoothing filter can overshoot the curve.
+    this.ceiling = this.ctx.createWaveShaper();
+    this.ceiling.curve = ceilingCurve(CEILING);
+    this.out = this._gain(0);
+    this.analyser = c.createAnalyser();
+    this.analyser.fftSize = 1024;
+    this.mix.connect(this.lowcut);
+    this.lowcut.connect(this.limiter);
+    this.limiter.connect(this.limitTrim);
+    this.limitTrim.connect(this.ceiling);
+    this.ceiling.connect(this.out);
+    this.out.connect(this.analyser);
+    this.analyser.connect(c.destination);
+
+    // Kick has its own clipper and skips the sidechain.
+    this.kickShaper = this._shaper();
+    this.kickOut = this._gain(0.95);
+    this.kickShaper.connect(this.kickOut);
+    this.kickOut.connect(this.mix);
+
+    // Other drums.
+    this.drumBus = this._gain(1);
+    this.drumDrive = this._shaper();
+    this.drumMake = this._gain(1);
+    this.drumBus.connect(this.drumDrive);
+    this.drumDrive.connect(this.drumMake);
+    this.drumMake.connect(this.mix);
+
+    // Bass, pads, and leads share a bus that ducks on each kick (sidechain),
+    // then the aggression distortion and bitcrush.
+    this.bassBus = this._gain(0.8);
+    this.padBus = this._gain(PAD_LEVEL);
+    this.leadBus = this._gain(0.55);
+    this.synthBus = this._gain(1);
+    this.duck = this._gain(1);
+    this.synthDrive = this._shaper();
+    this.synthMake = this._gain(1);
+    this.crush = this._shaper();
+    this.crush.oversample = 'none';
+    this.crushAmt = this._gain(0);
+    this.bassBus.connect(this.synthBus);
+    this.padBus.connect(this.synthBus);
+    this.leadBus.connect(this.synthBus);
+    // Thins the synths out during builds, so the drop lands with full weight.
+    this.buildHp = this._filter('highpass', 20);
+    this.synthBus.connect(this.buildHp);
+    this.buildHp.connect(this.duck);
+    this.duck.connect(this.synthDrive);
+    this.synthDrive.connect(this.synthMake);
+    this.synthMake.connect(this.mix);
+    this.synthMake.connect(this.crush);
+    this.crush.connect(this.crushAmt);
+    this.crushAmt.connect(this.mix);
+
+    // Reverb.
+    this.verb = c.createConvolver();
+    this.verb.buffer = makeImpulse(c, 1.8, 'aggro-verb');
+    this.verbSend = this._gain(1);
+    this.verbOut = this._gain(0.45);
+    this.verbSend.connect(this.verb);
+    this.verb.connect(this.verbOut);
+    this.verbOut.connect(this.mix);
+    this.padSend = this._gain(0.35);
+    this.padBus.connect(this.padSend);
+    this.padSend.connect(this.verbSend);
+    this.leadSend = this._gain(0.15);
+    this.leadBus.connect(this.leadSend);
+    this.leadSend.connect(this.verbSend);
+
+    // Lead echo, dotted 8th, follows the tempo.
+    this.delay = c.createDelay(2);
+    this.delaySend = this._gain(0.15);
+    this.delayTone = this._filter('lowpass', 2800);
+    this.delayFb = this._gain(0.35);
+    this.leadBus.connect(this.delaySend);
+    this.delaySend.connect(this.delay);
+    this.delay.connect(this.delayTone);
+    this.delayTone.connect(this.delayFb);
+    this.delayFb.connect(this.delay);
+    this.delayTone.connect(this.duck);
+
+    // Risers, downlifters, impacts.
+    this.fxBus = this._gain(0.6);
+    this.fxBus.connect(this.mix);
+    this.fxSend = this._gain(0.3);
+    this.fxBus.connect(this.fxSend);
+    this.fxSend.connect(this.verbSend);
+
+    // Your vocal samples.
+    this.vocalBus = this._gain(1);
+    this.vocalShaper = this._shaper();
+    this.vocalOut = this._gain(0.8);
+    this.vocalSend = this._gain(0.25);
+    this.vocalBus.connect(this.vocalShaper);
+    this.vocalShaper.connect(this.vocalOut);
+    this.vocalOut.connect(this.mix);
+    this.vocalOut.connect(this.vocalSend);
+    this.vocalSend.connect(this.verbSend);
+  }
+
+  // Things that depend on the track: kick tuning, bass and lead registers.
+  _trackChanged() {
+    const tr = this.track;
+    this.bassRoot = 28 + ((tr.harmony.rootPc - 4 + 12) % 12); // E1 up to D♯2
+    this.leadRoot = this.bassRoot + 24;
+    let f = midiToHz(this.bassRoot);
+    while (f > 62) f /= 2;
+    while (f < 40) f *= 2;
+    this.kickEndHz = f;
+    this.delaySend.gain.value = tr.lead.delayMix;
+    this._cache.kick = null;
+    this.applyLive();
+  }
+
+  // Apply slider values that act on the sound right away.
+  applyLive() {
+    const s = this.s;
+    const now = this.ctx.currentTime;
+    const a = s.aggression / 100;
+    const grit = this.track.drums.kick.grit;
+    const kickKey = a + ':' + grit;
+    if (this._cache.kick !== kickKey) {
+      this._cache.kick = kickKey;
+      this.kickShaper.curve = driveCurve(0.2 + a * 0.5 + grit * 0.15);
+    }
+    if (this._cache.agg !== a) {
+      this._cache.agg = a;
+      this.drumDrive.curve = driveCurve(a * 0.55);
+      this.synthDrive.curve = driveCurve(0.08 + a * 0.75);
+      this.crush.curve = crushCurve(Math.round(7 - a * 4));
+      this.drumMake.gain.setTargetAtTime(DRUM_LEVEL * driveMakeup(a * 0.55, 0.6), now, 0.02);
+      this.synthMake.gain.setTargetAtTime(SYNTH_LEVEL * driveMakeup(0.08 + a * 0.75, 0.25), now, 0.02);
+      this.crushAmt.gain.setTargetAtTime(Math.max(0, (a - 0.25) / 0.75) * 0.3, now, 0.02);
+    }
+    const vocalKey = s.vocalDistort ? 'on' + a : 'off';
+    if (this._cache.vocal !== vocalKey) {
+      this._cache.vocal = vocalKey;
+      this.vocalShaper.curve = s.vocalDistort ? driveCurve(0.45 + a * 0.4) : null;
+    }
+    this.vocalOut.gain.setTargetAtTime((s.vocalLevel / 100) * 0.9, now, 0.02);
+    this.delay.delayTime.setTargetAtTime((60 / s.tempo) * 0.75, now, 0.05);
+    if (this.running && this.ctx instanceof AudioContext) {
+      this.out.gain.setTargetAtTime(volumeGain(s.volume), now, 0.03);
+    }
+  }
+
+  // ---- playback ----
+
+  start(fromState) {
+    const c = this.ctx;
+    const now = c.currentTime;
+    this.state = fromState || initialState(0, 0, 0, this.s);
+    this.running = true;
+    this.out.gain.cancelScheduledValues(now);
+    this.out.gain.setValueAtTime(0, now);
+    this.out.gain.linearRampToValueAtTime(volumeGain(this.s.volume), now + 0.08);
+    this.nextTime = now + 0.08;
+    this._pump();
+    this.timer = setInterval(() => this._pump(), 25);
+  }
+
+  _pump() {
+    const now = this.ctx.currentTime;
+    if (this.nextTime < now - 0.1) this.nextTime = now + 0.05; // fell behind; skip ahead
+    while (this.nextTime < now + 0.18) {
+      this.playStep(this.nextTime, this.state);
+      this._advance(this.state);
+      this.nextTime += 15 / this.s.tempo;
+    }
+  }
+
+  stop() {
+    const c = this.ctx;
+    const now = c.currentTime;
+    clearInterval(this.timer);
+    this.timer = null;
+    this.running = false;
+    this.out.gain.cancelScheduledValues(now);
+    this.out.gain.setValueAtTime(this.out.gain.value, now);
+    this.out.gain.linearRampToValueAtTime(0, now + 0.08);
+    setTimeout(() => this.analyser.disconnect(), 250);
+  }
+
+  // Schedule `seconds` of music on an OfflineAudioContext.
+  renderOffline(fromState, seconds) {
+    this.running = true;
+    this.out.gain.value = volumeGain(this.s.volume);
+    this.state = fromState;
+    let t = 0.01;
+    while (t < seconds) {
+      this.playStep(t, this.state);
+      this._advance(this.state);
+      t += 15 / this.s.tempo;
+    }
+  }
+
+  _advance(st) {
+    st.step++;
+    st.abs++;
+    if (st.step < 16) return;
+    st.step = 0;
+    st.bar++;
+    if (st.bar < st.bars) return;
+    st.bar = 0;
+    st.sec++;
+    if (st.sec >= ARRANGEMENT.length) {
+      st.sec = LOOP_FROM;
+      st.cycle++;
+    }
+    const name = ARRANGEMENT[st.sec];
+    st.bars = sectionBars(name, this.s.sectionLen);
+    if (name === 'drop') st.dropNo++;
+  }
+
+  // ---- the arrangement: what plays on each 16th ----
+
+  playStep(t, st) {
+    if (st.step === 0 && this.pendingTrack) {
+      this.track = this.pendingTrack;
+      this.pendingTrack = null;
+      this._trackChanged();
+    }
+    const tr = this.track;
+    const s = this.s;
+    const name = ARRANGEMENT[st.sec];
+    const beat = 60 / s.tempo;
+    const six = beat / 4;
+    const { step, bar, bars } = st;
+    const mode = MODES[s.darkness];
+    const chordDeg = tr.harmony.prog[bar % 4];
+    const intensity = s.drums / 100;
+    const lastBar = bar === bars - 1;
+    const p = (bar * 16 + step) / (bars * 16); // progress through the section
+    const jit = (salt) => hash01(tr.seed, st.cycle, st.sec, st.abs, salt);
+
+    const isIntro = name === 'intro';
+    const isBuild = name === 'build';
+    const isDrop = name === 'drop';
+    const isBreak = name === 'break';
+    const dropout = isBuild && lastBar && step >= 8; // the gap before the drop
+    const variant = isDrop ? (st.dropNo - 1) % 3 : 0;
+
+    if (this.onStep) this.onStep(t, { name, bar, bars, step, sec: st.sec, cycle: st.cycle, dropNo: st.dropNo });
+
+    // Section-change effects.
+    if (step === 0) {
+      const hpTarget = isBuild ? 30 + 650 * p * p : 20;
+      if (isDrop && bar === 0) this.buildHp.frequency.setValueAtTime(20, t);
+      else this.buildHp.frequency.setTargetAtTime(hpTarget, t, 0.4);
+      const riserBars = Math.min(4, bars);
+      if (isBuild && bar === bars - riserBars) this.riser(t, riserBars * 16 * six);
+      if (isDrop && bar === 0) this.impact(t, 1);
+      if (isBreak && bar === 0) {
+        this.impact(t, 0.5);
+        this.downlifter(t, 2 * 16 * six);
+      }
+    }
+
+    // Kick: four on the floor.
+    const kickOn = isDrop || (isBuild && !dropout) || (isIntro && bar >= bars / 2);
+    if (kickOn && step % 4 === 0) {
+      this.kick(t, isDrop ? 1 : 0.85);
+      this.duckAt(t, beat);
+    }
+    if (isDrop && intensity > 0.7 && bar % 2 === 1 && tr.drums.ghostKicks.includes(step)) {
+      this.kick(t, 0.55);
+      this.duckAt(t, beat * 0.5);
+    }
+
+    // Snare/clap on 2 and 4; a roll at the end of each build; fills in drops.
+    const rollBars = bars >= 8 ? 2 : 1;
+    const inRoll = isBuild && bar >= bars - rollBars;
+    if (inRoll) {
+      const rollP = (bar - (bars - rollBars) + step / 16) / rollBars;
+      const sixteenths = rollBars === 1 || bar === bars - 1;
+      if (sixteenths || step % 2 === 0) this.snare(t, 0.3 + 0.7 * rollP, false);
+    } else if ((isDrop || isBuild) && step % 8 === 4) {
+      this.snare(t, 0.95, true);
+    } else if (isDrop && intensity > 0.35 && bar % 8 === 7 && step >= 12) {
+      const fill16 = tr.drums.fill === '16ths' || step >= 14;
+      if (fill16 || step % 2 === 0) this.snare(t, 0.45 + 0.12 * (step - 12), false);
+    } else if (isDrop && intensity > 0.8 && step % 16 === 14 && jit('ghost') < 0.5) {
+      this.snare(t, 0.3, false);
+    }
+
+    // Hats.
+    const hatOn = !dropout && (isDrop || isBuild || isIntro || (isBreak && bar >= bars / 2));
+    if (hatOn) {
+      const busy = intensity > 0.3 && (isDrop || (isBuild && p > 0.5));
+      const offbeatsOnly = isIntro || isBreak;
+      const play = offbeatsOnly ? step % 4 === 2 : busy || step % 2 === 0;
+      if (play) {
+        const open = isDrop && intensity > 0.45 && tr.drums.openHats.includes(step);
+        const quiet = offbeatsOnly ? 0.55 : 1;
+        const vel = tr.drums.hat.accents[step] * (0.35 + 0.65 * intensity) * quiet * (0.9 + 0.2 * jit('h'));
+        this.hat(t, vel, open, (jit('hp') - 0.5) * 0.3);
+      }
+    }
+    if (isDrop && intensity > 0.6 && tr.drums.perc.steps[step]) this.perc(t, 0.5 + 0.4 * intensity);
+
+    // Bass.
+    const bassOn = isDrop || (isBuild && !dropout) || (isIntro && bar >= bars / 2);
+    if (bassOn) {
+      let n = BASS_PATTERNS[s.bassPattern].note(step, bar, tr);
+      if (tr.bass.turnaround && s.bassPattern !== 4 && bar % 4 === 3 && step >= 12) {
+        n = step % 4 === 0 ? null : { deg: 0, oct: step % 2 ? 12 : 0, len: 1 };
+      }
+      if (n) {
+        let root = this.bassRoot + degreeSemis(mode, chordDeg + n.deg);
+        while (root - this.bassRoot > 9) root -= 12;
+        const cutScale = isIntro ? 0.4 : isBuild ? 0.6 + 0.4 * p : 1;
+        this.bassNote(t, root + n.oct, n.len * six * 0.9, 0.85, cutScale);
+      }
+    }
+
+    // Pads: one chord per bar.
+    if (step === 0 && !(isBuild && lastBar)) {
+      const lvl = isIntro ? 0.6 : isBreak ? 1.5 : isBuild ? 0.5 : 0.3;
+      const notes = triad(mode, chordDeg).map((x) => this.leadRoot + x);
+      this.pad(t, notes, 16 * six, lvl);
+    }
+
+    // Leads: supersaw stabs and hoover, mixed by Lead blend.
+    if ((isDrop || isBuild || isBreak) && !dropout) {
+      const blend = s.leadBlend / 100;
+      const stabAmt = Math.cos((blend * Math.PI) / 2);
+      const hoovAmt = Math.sin((blend * Math.PI) / 2);
+      const lvl = isDrop ? 1 : isBuild ? 0.35 + 0.35 * p : 0.75;
+      const i32 = (bar % 2) * 16 + step;
+
+      const sv = tr.lead.stabVariants[variant][i32];
+      if (stabAmt > 0.05 && sv) {
+        const cut = isDrop ? tr.lead.stab.cutoff : isBuild ? 450 + p * (tr.lead.stab.cutoff - 450) : 1500;
+        const tri = triad(mode, chordDeg + sv.inv).map((x) => this.leadRoot + 12 + x);
+        tri.push(this.leadRoot + degreeSemis(mode, chordDeg)); // root an octave down for weight
+        this.stab(t, tri, sv.len * six * 0.8, lvl * stabAmt * (sv.accent ? 1 : 0.7), cut);
+      }
+
+      const hv = tr.lead.hooverVariants[variant][i32];
+      if (hoovAmt > 0.05 && hv && (isDrop || p >= 0.5)) {
+        const midi = this.leadRoot + degreeSemis(mode, chordDeg + hv.deg);
+        const cut = isDrop ? 3400 : isBuild ? 1000 + p * 1800 : 1200;
+        this.hoover(t, midi, hv.len * six * 0.95, lvl * hoovAmt, this.lastHoover, cut);
+        this.lastHoover = midi;
+      }
+    }
+
+    // Your vocal samples, dropped in on the downbeat.
+    if (this.vocals.length && s.vocalLevel > 0 && step === 0) {
+      const every = Number(s.vocalEvery) || 4;
+      if ((isDrop && bar % every === 0) || (isBuild && bar === 0)) {
+        const buf = this.vocals[Math.floor(jit('v') * this.vocals.length)];
+        this.vocal(t, buf);
+      }
+    }
+  }
+
+  // ---- voices ----
+
+  // Sidechain: dip the bass/pad/lead bus on each kick, then let it recover.
+  duckAt(t, beat) {
+    const depth = (this.s.sidechain / 100) * 0.85;
+    if (depth <= 0.001) return;
+    const g = this.duck.gain;
+    const t0 = Math.max(0, t - 0.004); // fully down by the time the kick lands
+    g.setValueAtTime(1, t0);
+    g.linearRampToValueAtTime(1 - depth, t);
+    g.setTargetAtTime(1, t + 0.02, beat * 0.13);
+  }
+
+  _noiseSource(t, salt) {
+    const n = this.ctx.createBufferSource();
+    n.buffer = this.noise;
+    return { node: n, offset: hash01(t.toFixed(4), salt) * 1.5 };
+  }
+
+  kick(t, vel) {
+    const c = this.ctx;
+    const k = this.track.drums.kick;
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(k.pStart, t);
+    o.frequency.exponentialRampToValueAtTime(this.kickEndHz, t + k.pTime);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.0015);
+    g.gain.setValueAtTime(vel, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + k.decay);
+    o.connect(g);
+    g.connect(this.kickShaper);
+    o.start(t);
+    o.stop(t + k.decay + 0.05);
+
+    const { node, offset } = this._noiseSource(t, 'kick');
+    const hp = this._filter('highpass', 1800);
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(k.click * vel, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.012);
+    node.connect(hp);
+    hp.connect(ng);
+    ng.connect(this.kickShaper);
+    node.start(t, offset);
+    node.stop(t + 0.02);
+  }
+
+  snare(t, vel, withBody) {
+    const c = this.ctx;
+    const cl = this.track.drums.clap;
+    const { node, offset } = this._noiseSource(t, 'snare');
+    const bp = this._filter('bandpass', cl.tone, 0.9);
+    const g = c.createGain();
+    // Clap: three quick bursts, then the tail.
+    g.gain.setValueAtTime(0, t);
+    for (const d of [0, 0.011, 0.022]) {
+      g.gain.setValueAtTime(vel, t + d);
+      g.gain.linearRampToValueAtTime(vel * 0.25, t + d + 0.009);
+    }
+    g.gain.setValueAtTime(vel, t + 0.031);
+    g.gain.setTargetAtTime(0, t + 0.033, cl.decay / 3);
+    node.connect(bp);
+    bp.connect(g);
+    g.connect(this.drumBus);
+    const send = this._gain(cl.verb);
+    g.connect(send);
+    send.connect(this.verbSend);
+    node.start(t, offset);
+    node.stop(t + cl.decay * 2 + 0.06);
+
+    if (withBody && cl.body > 0.05) {
+      const o = c.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(200, t);
+      o.frequency.exponentialRampToValueAtTime(150, t + 0.05);
+      const bg = c.createGain();
+      bg.gain.setValueAtTime(cl.body * vel, t);
+      bg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      o.connect(bg);
+      bg.connect(this.drumBus);
+      o.start(t);
+      o.stop(t + 0.1);
+    }
+  }
+
+  hat(t, vel, open, pan) {
+    const c = this.ctx;
+    const h = this.track.drums.hat;
+    const { node, offset } = this._noiseSource(t, 'hat');
+    const hp = this._filter('highpass', h.tone);
+    const g = c.createGain();
+    const decay = open ? 0.2 : h.decay;
+    g.gain.setValueAtTime(vel * 0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+    const pn = c.createStereoPanner();
+    pn.pan.value = pan;
+    node.connect(hp);
+    hp.connect(g);
+    g.connect(pn);
+    pn.connect(this.drumBus);
+    node.start(t, offset);
+    node.stop(t + decay + 0.02);
+  }
+
+  perc(t, vel) {
+    const c = this.ctx;
+    const pc = this.track.drums.perc;
+    const g = c.createGain();
+    const pn = c.createStereoPanner();
+    pn.pan.value = 0.35;
+    g.connect(pn);
+    pn.connect(this.drumBus);
+    if (pc.type === 'zap') {
+      const o = c.createOscillator();
+      o.frequency.setValueAtTime(1400 * pc.pitch, t);
+      o.frequency.exponentialRampToValueAtTime(90, t + 0.05);
+      g.gain.setValueAtTime(vel * 0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      o.connect(g);
+      o.start(t);
+      o.stop(t + 0.09);
+    } else {
+      const bp = this._filter('bandpass', 2400 * pc.pitch, 3);
+      bp.connect(g);
+      g.gain.setValueAtTime(vel * 0.4, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      for (const f of [587, 845]) {
+        const o = c.createOscillator();
+        o.type = 'square';
+        o.frequency.value = f * pc.pitch;
+        o.connect(bp);
+        o.start(t);
+        o.stop(t + 0.07);
+      }
+    }
+  }
+
+  bassNote(t, midi, dur, vel, cutScale) {
+    const c = this.ctx;
+    const b = this.track.bass.sound;
+    const f = midiToHz(midi);
+    const lp = this._filter('lowpass', 100, b.q);
+    const rest = Math.min(18000, b.cutoff * cutScale);
+    lp.frequency.setValueAtTime(Math.min(18000, rest + b.env * cutScale), t);
+    lp.frequency.setTargetAtTime(rest, t, b.decay / 2.5);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel * 0.5, t + 0.002);
+    g.gain.setValueAtTime(vel * 0.5, t + Math.max(0.003, dur - 0.01));
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.025);
+    const end = t + dur + 0.05;
+    for (const d of [-b.detune, b.detune]) {
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      o.detune.value = d;
+      o.connect(lp);
+      o.start(t);
+      o.stop(end);
+    }
+    if (b.sub) {
+      const o = c.createOscillator();
+      o.type = 'square';
+      o.frequency.value = f / 2;
+      const sg = this._gain(0.35);
+      o.connect(sg);
+      sg.connect(lp);
+      o.start(t);
+      o.stop(end);
+    }
+    lp.connect(g);
+    g.connect(this.bassBus);
+  }
+
+  pad(t, notes, dur, level) {
+    const c = this.ctx;
+    const lp = this._filter('lowpass', 900, 0.5);
+    const g = c.createGain();
+    const attack = Math.min(0.4, dur * 0.3);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(level * 0.12, t + attack);
+    g.gain.setValueAtTime(level * 0.12, t + dur - 0.05);
+    g.gain.setTargetAtTime(0, t + dur - 0.05, 0.15);
+    const end = t + dur + 0.7;
+    notes.forEach((m, i) => {
+      for (const d of [-10, 10]) {
+        const o = c.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = midiToHz(m);
+        o.detune.value = d;
+        const pn = c.createStereoPanner();
+        pn.pan.value = (d < 0 ? -0.4 : 0.4) * (i % 2 ? -1 : 1);
+        o.connect(pn);
+        pn.connect(lp);
+        o.start(t);
+        o.stop(end);
+      }
+    });
+    lp.connect(g);
+    g.connect(this.padBus);
+  }
+
+  // Supersaw stab: five detuned saws per note, chopped short. The saws are
+  // drawn once per chord into a buffer (see _supersaw), which is far lighter
+  // than running twenty oscillators for every 16th note.
+  stab(t, notes, dur, vel, cutoff) {
+    const c = this.ctx;
+    const st = this.track.lead.stab;
+    const src = c.createBufferSource();
+    src.buffer = this._supersaw(notes);
+    const lp = this._filter('lowpass', cutoff, 0.8);
+    lp.frequency.setValueAtTime(Math.min(18000, cutoff * 1.6), t);
+    lp.frequency.setTargetAtTime(cutoff, t, 0.04);
+    const g = c.createGain();
+    const peak = vel * 0.22;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.003);
+    g.gain.setTargetAtTime(peak * 0.6, t + 0.003, st.decay / 3);
+    g.gain.setValueAtTime(peak * 0.6, t + Math.max(0.01, dur));
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.04);
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(this.leadBus);
+    src.start(t);
+    src.stop(t + dur + 0.08);
+  }
+
+  // Half a second of a held supersaw chord, cached per chord.
+  _supersaw(notes) {
+    const st = this.track.lead.stab;
+    const key = notes.join(',') + '|' + st.detune.toFixed(3);
+    let buf = this._sawCache.get(key);
+    if (buf) return buf;
+    const sr = this.ctx.sampleRate;
+    const len = Math.floor(sr * 0.5);
+    buf = this.ctx.createBuffer(2, len, sr);
+    const L = buf.getChannelData(0);
+    const R = buf.getChannelData(1);
+    const spread = [-1, 1, 0, -0.5, 0.5];
+    const pans = [-0.6, 0.6, 0, -0.3, 0.3];
+    const norm = 1 / Math.sqrt(notes.length * spread.length);
+    const r = mulberry32(hashString(key));
+    // Band-limited saw (polyBLEP), so high notes don't fold back into hiss.
+    const blep = (ph, dt) => {
+      if (ph < dt) {
+        const x = ph / dt;
+        return x + x - x * x - 1;
+      }
+      if (ph > 1 - dt) {
+        const x = (ph - 1) / dt;
+        return x * x + x + x + 1;
+      }
+      return 0;
+    };
+    for (const m of notes) {
+      spread.forEach((sp, i) => {
+        const dt = (midiToHz(m) * Math.pow(2, (sp * st.detune) / 1200)) / sr;
+        const a = ((pans[i] + 1) * Math.PI) / 4;
+        const gl = Math.cos(a) * norm;
+        const gr = Math.sin(a) * norm;
+        let ph = r();
+        for (let n = 0; n < len; n++) {
+          const y = 2 * ph - 1 - blep(ph, dt);
+          L[n] += y * gl;
+          R[n] += y * gr;
+          ph += dt;
+          if (ph >= 1) ph -= 1;
+        }
+      });
+    }
+    if (this._sawCache.size > 48) this._sawCache.clear();
+    this._sawCache.set(key, buf);
+    return buf;
+  }
+
+  // Hoover: detuned saws plus one an octave down, swooping up into each note
+  // and (optionally) diving down on release.
+  hoover(t, midi, dur, vel, prevMidi, cutoff) {
+    const c = this.ctx;
+    const h = this.track.lead.hoover;
+    const f = midiToHz(midi);
+    const fPrev = prevMidi != null ? midiToHz(prevMidi) : f;
+    const lp = this._filter('lowpass', cutoff, 2);
+    const g = c.createGain();
+    const peak = vel * 0.11;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.01);
+    g.gain.setValueAtTime(peak, t + dur);
+    g.gain.setTargetAtTime(0, t + dur, 0.05);
+    const end = t + dur + 0.3;
+    const voices = [
+      { d: -h.detune, pan: -0.5, lvl: 1 },
+      { d: 0, pan: 0, lvl: 1 },
+      { d: h.detune, pan: 0.5, lvl: 1 },
+      { d: -1200, pan: 0, lvl: 0.7 },
+    ];
+    for (const v of voices) {
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(fPrev, t);
+      o.frequency.exponentialRampToValueAtTime(f, t + h.glide);
+      o.detune.setValueAtTime(v.d - h.bend * 100, t);
+      o.detune.linearRampToValueAtTime(v.d, t + 0.09);
+      if (h.dive) {
+        o.detune.setValueAtTime(v.d, t + dur);
+        o.detune.linearRampToValueAtTime(v.d - 700, t + dur + 0.2);
+      }
+      const vg = this._gain(v.lvl);
+      const pn = c.createStereoPanner();
+      pn.pan.value = v.pan;
+      o.connect(vg);
+      vg.connect(pn);
+      pn.connect(lp);
+      o.start(t);
+      o.stop(end);
+    }
+    lp.connect(g);
+    g.connect(this.leadBus);
+  }
+
+  riser(t, dur) {
+    const c = this.ctx;
+    const n = c.createBufferSource();
+    n.buffer = this.noise;
+    n.loop = true;
+    const bp = this._filter('bandpass', 250, 1.5);
+    bp.frequency.setValueAtTime(250, t);
+    bp.frequency.exponentialRampToValueAtTime(7000, t + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + dur);
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.03);
+    n.connect(bp);
+    bp.connect(g);
+    g.connect(this.fxBus);
+    n.start(t);
+    n.stop(t + dur + 0.05);
+  }
+
+  downlifter(t, dur) {
+    const c = this.ctx;
+    const n = c.createBufferSource();
+    n.buffer = this.noise;
+    n.loop = true;
+    const hp = this._filter('highpass', 5000);
+    hp.frequency.setValueAtTime(5000, t);
+    hp.frequency.exponentialRampToValueAtTime(150, t + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.28, t);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(hp);
+    hp.connect(g);
+    g.connect(this.fxBus);
+    n.start(t);
+    n.stop(t + dur + 0.05);
+  }
+
+  // Low boom plus a noise crash at the start of drops and breaks.
+  impact(t, amount) {
+    const c = this.ctx;
+    const o = c.createOscillator();
+    o.frequency.setValueAtTime(70, t);
+    o.frequency.exponentialRampToValueAtTime(32, t + 0.6);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.7 * amount, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+    o.connect(g);
+    g.connect(this.fxBus);
+    o.start(t);
+    o.stop(t + 1.5);
+
+    const n = c.createBufferSource();
+    n.buffer = this.noise;
+    const hp = this._filter('highpass', 4000);
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(0.22 * amount, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+    n.connect(hp);
+    hp.connect(ng);
+    ng.connect(this.fxBus);
+    n.start(t);
+    n.stop(t + 1.85);
+  }
+
+  vocal(t, buf) {
+    const n = this.ctx.createBufferSource();
+    n.buffer = buf;
+    n.connect(this.vocalBus);
+    n.start(t);
+  }
+}
+
+// ---- wav.js ----
+// WAV export: turns a rendered AudioBuffer into a 16-bit WAV file.
+
+function encodeWav(buffer) {
+  const channels = buffer.numberOfChannels;
+  const frames = buffer.length;
+  const rate = buffer.sampleRate;
+  const bytes = frames * channels * 2;
+  const view = new DataView(new ArrayBuffer(44 + bytes));
+  const text = (o, s) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
+  };
+  text(0, 'RIFF');
+  view.setUint32(4, 36 + bytes, true);
+  text(8, 'WAVE');
+  text(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // plain PCM
+  view.setUint16(22, channels, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * channels * 2, true);
+  view.setUint16(32, channels * 2, true);
+  view.setUint16(34, 16, true);
+  text(36, 'data');
+  view.setUint32(40, bytes, true);
+  const data = [];
+  for (let ch = 0; ch < channels; ch++) data.push(buffer.getChannelData(ch));
+  let o = 44;
+  for (let i = 0; i < frames; i++) {
+    for (let ch = 0; ch < channels; ch++) {
+      const x = Math.max(-1, Math.min(1, data[ch][i]));
+      view.setInt16(o, x < 0 ? x * 0x8000 : x * 0x7fff, true);
+      o += 2;
+    }
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+// Loudest sample and average level, in decibels below full scale.
+function measureLevels(buffer) {
+  let peak = 0;
+  let sum = 0;
+  let n = 0;
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const d = buffer.getChannelData(ch);
+    for (let i = 0; i < d.length; i++) {
+      const a = Math.abs(d[i]);
+      if (a > peak) peak = a;
+      sum += d[i] * d[i];
+      n++;
+    }
+  }
+  const db = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
+  return { peakDb: db(peak), rmsDb: db(Math.sqrt(sum / n)) };
+}
+
+// ---- ui.js ----
+// The page: controls, seed and locks, favorites, export, vocals, and the
+// live display.
+
+const STORE_KEY = 'aggro-gen-v1';
+
+const DEFAULTS = {
+  tempo: 140,
+  aggression: 45,
+  darkness: 0,
+  leadBlend: 50,
+  bassPattern: 0,
+  drums: 60,
+  sidechain: 60,
+  sectionLen: 16,
+  volume: 45,
+  vocalLevel: 70,
+  vocalEvery: 4,
+  vocalDistort: true,
+};
+
+const CONTROLS = [
+  { id: 'tempo', label: 'Tempo', hint: 'beats per minute', min: 125, max: 155, step: 1, fmt: (v) => `${v}` },
+  { id: 'aggression', label: 'Aggression', hint: 'distortion and bitcrush', min: 0, max: 100, step: 1, fmt: (v) => `${v}%` },
+  { id: 'darkness', label: 'Darkness', hint: 'which scale', min: 0, max: 4, step: 1, fmt: (v) => MODES[v].name },
+  {
+    id: 'leadBlend',
+    label: 'Lead blend',
+    hint: 'supersaw stabs to hoover',
+    min: 0,
+    max: 100,
+    step: 1,
+    fmt: (v) => (v <= 5 ? 'All supersaw' : v >= 95 ? 'All hoover' : `${100 - v} / ${v}`),
+  },
+  { id: 'bassPattern', label: 'Bass pattern', hint: '', min: 0, max: BASS_PATTERNS.length - 1, step: 1, fmt: (v) => BASS_PATTERNS[v].name },
+  { id: 'drums', label: 'Drum intensity', hint: 'hats, fills, extra hits', min: 0, max: 100, step: 1, fmt: (v) => `${v}%` },
+  { id: 'sidechain', label: 'Sidechain depth', hint: 'how hard bass and synths duck on each kick', min: 0, max: 100, step: 1, fmt: (v) => `${v}%` },
+  { id: 'sectionLen', label: 'Section length', hint: 'bars per drop; other sections are half', min: 8, max: 32, step: 4, fmt: (v) => `${v} bars` },
+];
+
+const SECTION_WORDS = { intro: 'Intro', build: 'Build', drop: 'Drop', break: 'Break' };
+
+const $ = (id) => document.getElementById(id);
+
+const app = {
+  settings: { ...DEFAULTS },
+  seed: null,
+  track: null,
+  locks: { drums: false, bass: false, lead: false },
+  favorites: [],
+  ctx: null,
+  engine: null,
+  vocals: [],
+  vocalNames: [],
+  pos: null,
+  stepQueue: [],
+};
+
+// ---- storage ----
+
+function loadStore() {
+  try {
+    const j = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (j && j.v === 1) return j;
+  } catch (e) {
+    /* storage blocked or empty */
+  }
+  return null;
+}
+
+let saveTimer = null;
+function saveStore() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(
+        STORE_KEY,
+        JSON.stringify({
+          v: 1,
+          favorites: app.favorites,
+          current: { seed: app.seed, settings: app.settings, locks: app.locks },
+        })
+      );
+    } catch (e) {
+      /* storage blocked; the page still works */
+    }
+  }, 150);
+}
+
+// ---- seed and track ----
+
+// parts: which seed parts' suggestions to copy into the sliders.
+function setSeed(seed, parts) {
+  app.seed = seed;
+  app.track = generateTrack(seed);
+  const t = app.track;
+  const s = app.settings;
+  if (parts.includes('harmony')) {
+    s.tempo = t.harmony.tempo;
+    s.darkness = t.harmony.darkness;
+  }
+  if (parts.includes('drums')) s.drums = t.drums.suggestedIntensity;
+  if (parts.includes('bass')) s.bassPattern = t.bass.suggestedPattern;
+  if (parts.includes('lead')) s.leadBlend = t.lead.suggestedBlend;
+  if (app.engine) {
+    app.engine.pendingTrack = t;
+    app.engine.applyLive();
+  }
+  $('seed').value = seed;
+  refreshControls();
+  saveStore();
+}
+
+function newTrack() {
+  const old = app.seed.split('-');
+  const fresh = newSeed().split('-');
+  const L = app.locks;
+  // A locked bass or lead keeps the key and chords too, so it sounds the same.
+  const keepHarmony = L.bass || L.lead;
+  const next = [keepHarmony ? old[0] : fresh[0], L.drums ? old[1] : fresh[1], L.bass ? old[2] : fresh[2], L.lead ? old[3] : fresh[3]];
+  const parts = [];
+  if (!keepHarmony) parts.push('harmony');
+  if (!L.drums) parts.push('drums');
+  if (!L.bass) parts.push('bass');
+  if (!L.lead) parts.push('lead');
+  setSeed(next.join('-'), parts);
+}
+
+function loadSeedFromInput() {
+  const seed = normalizeSeed($('seed').value);
+  if (!seed) {
+    $('seed').value = app.seed;
+    return;
+  }
+  setSeed(seed, SEED_PARTS);
+}
+
+// ---- controls ----
+
+function buildControls() {
+  const wrap = $('controls');
+  for (const c of CONTROLS) {
+    const div = document.createElement('div');
+    div.className = 'ctl';
+    div.innerHTML = `
+      <div class="ctl-head">
+        <label for="c-${c.id}">${c.label}${c.hint ? ` <span class="hint">${c.hint}</span>` : ''}</label>
+        <output id="o-${c.id}" for="c-${c.id}"></output>
+      </div>
+      <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}">`;
+    wrap.appendChild(div);
+    div.querySelector('input').addEventListener('input', (e) => {
+      app.settings[c.id] = Number(e.target.value);
+      refreshControls();
+      if (app.engine) app.engine.applyLive();
+      saveStore();
+    });
+  }
+}
+
+function refreshControls() {
+  const s = app.settings;
+  for (const c of CONTROLS) {
+    $('c-' + c.id).value = s[c.id];
+    $('o-' + c.id).textContent = c.fmt(s[c.id]);
+  }
+  $('volume').value = s.volume;
+  $('o-volume').textContent = `${s.volume}%`;
+  $('vocalLevel').value = s.vocalLevel;
+  $('o-vocalLevel').textContent = `${s.vocalLevel}%`;
+  $('vocalEvery').value = String(s.vocalEvery);
+  $('vocalDistort').checked = !!s.vocalDistort;
+  for (const part of ['drums', 'bass', 'lead']) {
+    $('lock-' + part).setAttribute('aria-pressed', String(app.locks[part]));
+  }
+  const h = app.track.harmony;
+  $('keyinfo').textContent = `${NOTE_NAMES[h.rootPc]} ${MODES[s.darkness].name.toLowerCase()} · ${s.tempo} beats per minute`;
+}
+
+// ---- play / stop ----
+
+async function ensureContext() {
+  if (!app.ctx) app.ctx = new AudioContext({ latencyHint: 'playback' });
+  if (app.ctx.state !== 'running') await app.ctx.resume();
+  return app.ctx;
+}
+
+async function play() {
+  const ctx = await ensureContext();
+  if (app.engine) return;
+  app.engine = new Engine(ctx, app.settings, app.track, app.vocals);
+  app.engine.onStep = (t, info) => app.stepQueue.push({ t, info });
+  app.engine.start();
+  $('play').textContent = 'Stop';
+  $('play').setAttribute('aria-pressed', 'true');
+  document.body.classList.add('playing');
+  requestAnimationFrame(draw);
+}
+
+function stop() {
+  if (!app.engine) return;
+  app.engine.stop();
+  app.engine = null;
+  app.stepQueue = [];
+  app.pos = null;
+  $('play').textContent = 'Play';
+  $('play').setAttribute('aria-pressed', 'false');
+  document.body.classList.remove('playing');
+  $('section').textContent = 'Stopped';
+  $('barinfo').textContent = '';
+  document.querySelectorAll('#steps span').forEach((el) => el.classList.remove('on'));
+}
+
+// ---- live display ----
+
+let scopeData = null;
+function draw() {
+  if (!app.engine) {
+    clearScope();
+    return;
+  }
+  const now = app.ctx.currentTime;
+  let latest = null;
+  while (app.stepQueue.length && app.stepQueue[0].t <= now) latest = app.stepQueue.shift().info;
+  if (latest) {
+    app.pos = latest;
+    $('section').textContent = SECTION_WORDS[latest.name];
+    $('barinfo').textContent = `bar ${latest.bar + 1} of ${latest.bars}`;
+    const cells = document.querySelectorAll('#steps span');
+    cells.forEach((el, i) => el.classList.toggle('on', i === latest.step));
+    document.body.dataset.section = latest.name;
+  }
+  const canvas = $('scope');
+  const an = app.engine.analyser;
+  if (!scopeData || scopeData.length !== an.fftSize) scopeData = new Float32Array(an.fftSize);
+  an.getFloatTimeDomainData(scopeData);
+  const w = (canvas.width = canvas.clientWidth * devicePixelRatio);
+  const h = (canvas.height = canvas.clientHeight * devicePixelRatio);
+  const g = canvas.getContext('2d');
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  g.lineWidth = 1.5 * devicePixelRatio;
+  g.beginPath();
+  for (let i = 0; i < scopeData.length; i++) {
+    const x = (i / (scopeData.length - 1)) * w;
+    const y = h / 2 - scopeData[i] * (h / 2) * 1.05;
+    if (i) g.lineTo(x, y);
+    else g.moveTo(x, y);
+  }
+  g.stroke();
+  requestAnimationFrame(draw);
+}
+
+function clearScope() {
+  const canvas = $('scope');
+  const g = canvas.getContext('2d');
+  g.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ---- favorites ----
+
+function renderFavorites() {
+  const list = $('favList');
+  list.innerHTML = '';
+  if (!app.favorites.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'Nothing saved yet.';
+    list.appendChild(li);
+    return;
+  }
+  app.favorites.forEach((f, i) => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'fav-name';
+    name.textContent = f.name;
+    const seed = document.createElement('span');
+    seed.className = 'fav-seed';
+    seed.textContent = f.seed;
+    const recall = document.createElement('button');
+    recall.type = 'button';
+    recall.textContent = 'Recall';
+    recall.addEventListener('click', () => recallFavorite(i));
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'quiet';
+    del.textContent = 'Delete';
+    del.setAttribute('aria-label', `Delete ${f.name}`);
+    del.addEventListener('click', () => {
+      app.favorites.splice(i, 1);
+      renderFavorites();
+      saveStore();
+    });
+    li.append(name, seed, recall, del);
+    list.appendChild(li);
+  });
+}
+
+function saveFavorite(e) {
+  e.preventDefault();
+  const name = $('favName').value.trim() || `Track ${app.favorites.length + 1}`;
+  app.favorites.unshift({ name, seed: app.seed, settings: { ...app.settings }, saved: new Date().toISOString().slice(0, 10) });
+  $('favName').value = '';
+  renderFavorites();
+  saveStore();
+}
+
+function recallFavorite(i) {
+  const f = app.favorites[i];
+  // Keep the same settings object: the engine holds a reference to it.
+  Object.assign(app.settings, DEFAULTS, f.settings, { volume: app.settings.volume });
+  setSeed(f.seed, []);
+}
+
+// ---- export ----
+
+async function exportWav() {
+  const btn = $('export');
+  const status = $('exportStatus');
+  btn.disabled = true;
+  status.textContent = 'Rendering 30 seconds…';
+  try {
+    const rate = 44100;
+    const secs = 30;
+    const off = new OfflineAudioContext(2, rate * secs, rate);
+    // Exports are made at full volume (the limiter still applies), so files
+    // can be compared with each other whatever the Volume slider says.
+    const settings = { ...app.settings, volume: 100 };
+    const eng = new Engine(off, settings, app.track, app.vocals);
+    // While playing: from the start of the current section. Otherwise: from
+    // the first build, so the file includes a drop.
+    const from = app.pos
+      ? initialState(app.pos.sec, app.pos.cycle, app.pos.dropNo - (app.pos.name === 'drop' ? 1 : 0), settings)
+      : initialState(1, 0, 0, settings);
+    eng.renderOffline(from, secs);
+    const buf = await off.startRendering();
+    const lv = measureLevels(buf);
+    const name = `Aggrotech ${app.seed}.wav`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(encodeWav(buf));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    status.textContent = `Saved “${name}”. Loudest point ${lv.peakDb.toFixed(1)} dB, average ${lv.rmsDb.toFixed(1)} dB (0 is the maximum).`;
+  } catch (err) {
+    status.textContent = `Couldn't render: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---- vocals ----
+
+async function loadVocals(files) {
+  const status = $('vocalStatus');
+  if (!files.length) return;
+  status.textContent = 'Loading…';
+  const ctx = app.ctx || (app.ctx = new AudioContext({ latencyHint: 'playback' }));
+  let failed = 0;
+  for (const file of files) {
+    try {
+      const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+      app.vocals.push(buf); // same array the engine reads
+      app.vocalNames.push(file.name);
+    } catch (e) {
+      failed++;
+    }
+  }
+  renderVocals(failed);
+}
+
+function renderVocals(failed = 0) {
+  const n = app.vocals.length;
+  let msg = n
+    ? `${n} sample${n === 1 ? '' : 's'} loaded: ${app.vocalNames.join(', ')}. They play in drops and at the start of builds.`
+    : 'None loaded, so no vocals.';
+  if (failed) msg += ` ${failed} file${failed === 1 ? '' : 's'} couldn't be read as audio.`;
+  $('vocalStatus').textContent = msg;
+  $('clearVocals').disabled = !n;
+}
+
+// ---- start up ----
+
+function init() {
+  buildControls();
+  const stored = loadStore();
+  if (stored) {
+    app.favorites = Array.isArray(stored.favorites) ? stored.favorites : [];
+    const cur = stored.current || {};
+    Object.assign(app.settings, DEFAULTS, cur.settings || {});
+    Object.assign(app.locks, cur.locks || {});
+  }
+  const seed = (stored && stored.current && normalizeSeed(stored.current.seed)) || null;
+  if (seed) setSeed(seed, []);
+  else setSeed(newSeed(), SEED_PARTS);
+
+  const steps = $('steps');
+  for (let i = 0; i < 16; i++) {
+    const sp = document.createElement('span');
+    if (i % 4 === 0) sp.className = 'beat';
+    steps.appendChild(sp);
+  }
+
+  $('play').addEventListener('click', () => (app.engine ? stop() : play()));
+  $('newTrack').addEventListener('click', newTrack);
+  $('volume').addEventListener('input', (e) => {
+    app.settings.volume = Number(e.target.value);
+    $('o-volume').textContent = `${app.settings.volume}%`;
+    if (app.engine) app.engine.applyLive();
+    saveStore();
+  });
+  $('seedForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    loadSeedFromInput();
+  });
+  $('copySeed').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(app.seed);
+      $('copySeed').textContent = 'Copied';
+    } catch (e) {
+      $('seed').select();
+      $('copySeed').textContent = 'Press Ctrl+C';
+    }
+    setTimeout(() => ($('copySeed').textContent = 'Copy'), 1500);
+  });
+  for (const part of ['drums', 'bass', 'lead']) {
+    $('lock-' + part).addEventListener('click', () => {
+      app.locks[part] = !app.locks[part];
+      refreshControls();
+      saveStore();
+    });
+  }
+  $('favForm').addEventListener('submit', saveFavorite);
+  $('export').addEventListener('click', exportWav);
+  $('loadVocals').addEventListener('click', () => $('vocalFiles').click());
+  $('vocalFiles').addEventListener('change', (e) => {
+    loadVocals([...e.target.files]);
+    e.target.value = '';
+  });
+  $('clearVocals').addEventListener('click', () => {
+    app.vocals.length = 0;
+    app.vocalNames.length = 0;
+    renderVocals();
+  });
+  $('vocalLevel').addEventListener('input', (e) => {
+    app.settings.vocalLevel = Number(e.target.value);
+    $('o-vocalLevel').textContent = `${app.settings.vocalLevel}%`;
+    if (app.engine) app.engine.applyLive();
+    saveStore();
+  });
+  $('vocalEvery').addEventListener('change', (e) => {
+    app.settings.vocalEvery = Number(e.target.value);
+    saveStore();
+  });
+  $('vocalDistort').addEventListener('change', (e) => {
+    app.settings.vocalDistort = e.target.checked;
+    if (app.engine) app.engine.applyLive();
+    saveStore();
+  });
+
+  renderFavorites();
+  renderVocals();
+  refreshControls();
+
+  // Read-only hooks for the automated checks in aggro/test/.
+  window.__aggro = {
+    get audioState() {
+      return app.ctx ? app.ctx.state : 'none';
+    },
+    get settings() {
+      return { ...app.settings };
+    },
+    get seed() {
+      return app.seed;
+    },
+    get position() {
+      return app.pos ? { ...app.pos } : null;
+    },
+    get vocalCount() {
+      return app.vocals.length;
+    },
+  };
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>

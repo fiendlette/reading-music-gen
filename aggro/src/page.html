@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Aggrotech generator</title>
+<style>
+/*__STYLE__*/
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <p class="kicker">Harsh electronic body music · made live in your browser</p>
+    <h1>Aggrotech generator</h1>
+    <p class="lede">Endless, original, and generated from a seed: the same seed always brings the same track back.</p>
+  </header>
+
+  <section class="deck" aria-label="Playback">
+    <button id="play" class="play" type="button" aria-pressed="false">Play</button>
+    <button id="newTrack" class="new" type="button">New track</button>
+    <div class="vol">
+      <div class="ctl-head"><label for="volume">Volume</label><output id="o-volume" for="volume"></output></div>
+      <input type="range" id="volume" min="0" max="100" step="1">
+    </div>
+  </section>
+
+  <section class="status" aria-label="Now playing">
+    <div class="status-row">
+      <span id="section" class="section-name" aria-live="polite">Stopped</span>
+      <span id="barinfo" class="barinfo"></span>
+      <span id="keyinfo" class="keyinfo"></span>
+    </div>
+    <div id="steps" class="steps" aria-hidden="true"></div>
+    <canvas id="scope" class="scope" aria-hidden="true"></canvas>
+  </section>
+
+  <section class="panel seed-panel" aria-label="Seed and locks">
+    <form id="seedForm" class="seed-row">
+      <label for="seed">Seed</label>
+      <input id="seed" type="text" spellcheck="false" autocomplete="off" aria-describedby="seedHelp">
+      <button type="submit">Load seed</button>
+      <button type="button" id="copySeed" class="quiet">Copy</button>
+    </form>
+    <p id="seedHelp" class="help">Type any seed (or any word) and press Load seed. New track rerolls the music but leaves Aggression, Sidechain, Section length, and Volume as you set them.</p>
+    <div class="locks" role="group" aria-label="Keep these parts when you press New track">
+      <span class="locks-label">Keep on New track:</span>
+      <button type="button" class="lock" id="lock-drums" aria-pressed="false">Drums</button>
+      <button type="button" class="lock" id="lock-bass" aria-pressed="false">Bass</button>
+      <button type="button" class="lock" id="lock-lead" aria-pressed="false">Lead</button>
+    </div>
+  </section>
+
+  <section id="controls" class="controls" aria-label="Sound controls"></section>
+
+  <div class="panels">
+    <section class="panel" aria-labelledby="favTitle">
+      <h2 id="favTitle">Favorites</h2>
+      <form id="favForm" class="fav-form">
+        <label for="favName" class="visually-hidden">Name</label>
+        <input id="favName" type="text" maxlength="60" placeholder="Name this one">
+        <button type="submit">Save</button>
+      </form>
+      <ul id="favList" class="fav-list"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="exportTitle">
+      <h2 id="exportTitle">Save audio</h2>
+      <button id="export" type="button">Save 30 seconds as WAV</button>
+      <p id="exportStatus" class="help" aria-live="polite">While playing, it starts from the current section. When stopped, it starts from the first build, so a drop is included.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="vocalTitle">
+      <h2 id="vocalTitle">Your vocals <span class="hint">optional</span></h2>
+      <p class="help">Load your own shouts or vocal samples. They stay on this computer; nothing is uploaded, and they're forgotten when you close the page.</p>
+      <div class="vocal-buttons">
+        <button id="loadVocals" type="button">Load vocal files</button>
+        <button id="clearVocals" type="button" class="quiet">Clear</button>
+        <input id="vocalFiles" type="file" accept="audio/*" multiple hidden>
+      </div>
+      <p id="vocalStatus" class="help" aria-live="polite"></p>
+      <div class="ctl">
+        <div class="ctl-head"><label for="vocalLevel">Vocal level</label><output id="o-vocalLevel" for="vocalLevel"></output></div>
+        <input type="range" id="vocalLevel" min="0" max="100" step="1">
+      </div>
+      <div class="vocal-opts">
+        <label for="vocalEvery">How often</label>
+        <select id="vocalEvery">
+          <option value="1">Every bar</option>
+          <option value="2">Every 2 bars</option>
+          <option value="4">Every 4 bars</option>
+          <option value="8">Every 8 bars</option>
+        </select>
+        <label class="check"><input type="checkbox" id="vocalDistort"> Distort</label>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <p>Synthesized in the browser, so it's demo-grade next to a produced track. A limiter on the output keeps it from spiking. Settings and favorites are saved in this browser only.</p>
+  </footer>
+</main>
+<script>
+/*__SCRIPT__*/
+</script>
+</body>
+</html>
