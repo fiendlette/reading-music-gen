@@ -168,6 +168,39 @@ h1 {
   color: var(--muted);
   margin-top: -0.1rem;
 }
+.presets {
+  border-top: 1px solid var(--line);
+  margin-top: 0.4rem;
+  padding-top: 1.2rem;
+}
+.presets h2 { font-size: 0.98rem; font-weight: 600; margin: 0 0 0.6rem; }
+.preset-row { display: flex; gap: 0.5rem; margin-bottom: 0.55rem; }
+.preset-row select, .preset-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+}
+.btn {
+  flex: none;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--ink);
+  background: var(--chip-on);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.quiet { background: transparent; color: var(--muted); }
+.preset-msg { margin: 0.2rem 0 0; min-height: 1.4em; font-size: 0.85rem; color: var(--muted); font-style: italic; }
 .foot {
   margin-top: 2rem;
   font-size: 0.85rem;
@@ -267,6 +300,24 @@ h1 {
     </div>
   </section>
 
+  <section class="presets" aria-label="Saved settings">
+    <h2>Saved settings</h2>
+    <div class="preset-row">
+      <select id="presetSel" aria-label="Load a saved setting"></select>
+      <button type="button" class="btn" id="presetDel">Delete</button>
+    </div>
+    <div class="preset-row">
+      <input type="text" id="presetName" maxlength="40" placeholder="Name this setting" aria-label="Name for this setting" autocomplete="off">
+      <button type="button" class="btn" id="presetSave">Save</button>
+    </div>
+    <div class="preset-row">
+      <button type="button" class="btn quiet" id="presetExport">Export file</button>
+      <button type="button" class="btn quiet" id="presetImport">Import file</button>
+      <input type="file" id="presetFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="preset-msg" id="presetMsg" aria-live="polite"></p>
+  </section>
+
   <p class="foot">Each kind keeps its own settings, saved in this browser. On an iPhone, the silent switch can mute it.</p>
   <p class="foot">Piano recordings: Salamander Grand Piano by Alexander Holm, used under a Creative Commons Attribution 3.0 license.</p>
 </main>
@@ -324,6 +375,44 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function midiToHz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   function bpm() { return Math.round(lerp(50, 110, cur().tempo)); }
+
+  // ---------- saved settings ----------
+  // Named presets, kept per kind. Volume is left out because it depends on the computer.
+  var PRESET_KEY = 'reading-drift-presets-v1';
+  var presets = { piano: [], pads: [], noise: [] };
+
+  function cleanSettings(mode, src) {
+    var out = {};
+    KEYS.forEach(function (k) {
+      out[k] = (src && typeof src[k] === 'number' && isFinite(src[k])) ? clamp(src[k], 0, 1) : DEFAULTS[mode][k];
+    });
+    return out;
+  }
+
+  function mergePresets(src) {
+    var n = 0;
+    if (!src || typeof src !== 'object') return 0;
+    Object.keys(DEFAULTS).forEach(function (m) {
+      if (!Array.isArray(src[m])) return;
+      src[m].forEach(function (p) {
+        if (!p || typeof p.name !== 'string') return;
+        var name = p.name.trim().slice(0, 40);
+        if (!name) return;
+        var entry = { name: name, s: cleanSettings(m, p.s) };
+        var at = -1;
+        presets[m].forEach(function (q, i) { if (q.name === name) at = i; });
+        if (at >= 0) presets[m][at] = entry; else presets[m].push(entry);
+        n++;
+      });
+    });
+    return n;
+  }
+
+  function savePresets() {
+    try { localStorage.setItem(PRESET_KEY, JSON.stringify(presets)); } catch (e) { /* ignore */ }
+  }
+
+  try { mergePresets(JSON.parse(localStorage.getItem(PRESET_KEY))); } catch (e) { /* none saved yet */ }
 
   // ---------- audio graph ----------
   var ctx = null;
@@ -1176,6 +1265,110 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
   var inputs = {};
   KEYS.concat(['volume']).forEach(function (k) { inputs[k] = document.getElementById(k); });
 
+  var presetSel = document.getElementById('presetSel');
+  var presetName = document.getElementById('presetName');
+  var presetDel = document.getElementById('presetDel');
+  var presetMsg = document.getElementById('presetMsg');
+  var presetFile = document.getElementById('presetFile');
+
+  function presetNote(text) { presetMsg.textContent = text; }
+
+  function renderPresets(selectName) {
+    var list = presets[store.mode];
+    presetSel.innerHTML = '';
+    var first = document.createElement('option');
+    first.value = '';
+    first.textContent = list.length ? 'Load a saved setting…' : 'No saved settings yet';
+    presetSel.appendChild(first);
+    list.forEach(function (p, i) {
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = p.name;
+      presetSel.appendChild(o);
+    });
+    presetSel.disabled = !list.length;
+    var at = -1;
+    list.forEach(function (p, i) { if (p.name === selectName) at = i; });
+    presetSel.value = at >= 0 ? String(at) : '';
+    presetDel.disabled = at < 0;
+  }
+
+  presetSel.addEventListener('change', function () {
+    var list = presets[store.mode];
+    var p = presetSel.value === '' ? null : list[parseInt(presetSel.value, 10)];
+    presetDel.disabled = !p;
+    if (!p) return;
+    KEYS.forEach(function (k) { cur()[k] = p.s[k]; });
+    save();
+    renderControls();
+    renderPresets(p.name);
+    presetName.value = p.name;
+    applyAll();
+    if (store.mode === 'noise' && playing) showIdle();
+    presetNote('Loaded “' + p.name + '”.');
+  });
+
+  document.getElementById('presetSave').addEventListener('click', function () {
+    var name = presetName.value.trim().slice(0, 40);
+    if (!name) { presetNote('Type a name first.'); presetName.focus(); return; }
+    var list = presets[store.mode];
+    var entry = { name: name, s: cleanSettings(store.mode, cur()) };
+    var at = -1;
+    list.forEach(function (q, i) { if (q.name === name) at = i; });
+    if (at >= 0) list[at] = entry; else list.push(entry);
+    savePresets();
+    renderPresets(name);
+    presetNote((at >= 0 ? 'Updated “' : 'Saved “') + name + '” for ' + store.mode + '.');
+  });
+
+  presetDel.addEventListener('click', function () {
+    var list = presets[store.mode];
+    if (presetSel.value === '') return;
+    var gone = list.splice(parseInt(presetSel.value, 10), 1)[0];
+    savePresets();
+    renderPresets('');
+    presetNote('Deleted “' + gone.name + '”.');
+  });
+
+  document.getElementById('presetExport').addEventListener('click', function () {
+    var total = presets.piano.length + presets.pads.length + presets.noise.length;
+    if (!total) { presetNote('Nothing to export yet.'); return; }
+    var data = { app: 'reading-drift', version: 1, presets: presets };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'reading-music-presets.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    presetNote('Exported ' + total + ' setting' + (total === 1 ? '' : 's') + '.');
+  });
+
+  document.getElementById('presetImport').addEventListener('click', function () { presetFile.click(); });
+  presetFile.addEventListener('change', function () {
+    var f = presetFile.files && presetFile.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var n = 0;
+      try {
+        var data = JSON.parse(String(reader.result));
+        n = mergePresets(data && data.presets ? data.presets : data);
+      } catch (e) { n = 0; }
+      if (n) {
+        savePresets();
+        renderPresets('');
+        presetNote('Imported ' + n + ' setting' + (n === 1 ? '' : 's') + '.');
+      } else {
+        presetNote('That file had no saved settings in it.');
+      }
+    };
+    reader.onerror = function () { presetNote('Could not read that file.'); };
+    reader.readAsText(f);
+    presetFile.value = '';
+  });
+
   function renderControls() {
     modeBtns.forEach(function (b) {
       b.setAttribute('aria-checked', b.getAttribute('data-mode') === store.mode ? 'true' : 'false');
@@ -1189,6 +1382,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     });
     document.querySelector('[data-row="beat"]').hidden = store.mode !== 'pads';
     updateTempoLabel();
+    renderPresets('');
   }
 
   function updateTempoLabel() {
@@ -1199,6 +1393,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     inputs[k].addEventListener('input', function () {
       cur()[k] = parseFloat(inputs[k].value);
       if (k === 'tempo') updateTempoLabel();
+      if (presetSel.value !== '') { presetSel.value = ''; presetDel.disabled = true; }
       save();
       applyAll();
       if (store.mode === 'noise' && playing) showIdle();
@@ -1272,7 +1467,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
   document.addEventListener('keydown', function (e) {
     if (e.code !== 'Space') return;
     var tag = (e.target && e.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
+    if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     e.preventDefault();
     toggle();
   });
