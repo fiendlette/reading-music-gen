@@ -240,6 +240,11 @@ h1 {
       <input type="range" id="beat" min="0" max="1" step="0.01">
       <div class="ends"><span>Off</span><span>Busier</span></div>
     </div>
+    <div class="row" data-row="tempo">
+      <label for="tempo" id="tempoLabel">Tempo</label>
+      <input type="range" id="tempo" min="0" max="1" step="0.01">
+      <div class="ends"><span>Slower</span><span>Faster</span></div>
+    </div>
     <div class="row" data-row="tone">
       <label for="tone">Tone</label>
       <input type="range" id="tone" min="0" max="1" step="0.01">
@@ -282,13 +287,12 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     { name: 'Lydian', steps: [0, 2, 4, 6, 7, 9, 11] }
   ];
   var DEFAULTS = {
-    piano: { pace: 0.45, mood: 0.55, notes: 0.4, melody: 0, beat: 0, tone: 0.45, noise: 0, noiseKind: 0.6 },
-    pads: { pace: 0.6, mood: 0.5, notes: 0.5, melody: 0, beat: 0.45, tone: 0.4, noise: 0, noiseKind: 0.6 },
-    noise: { pace: 0.5, mood: 0.5, notes: 0.5, melody: 0, beat: 0, tone: 0.5, noise: 0.7, noiseKind: 0.7 }
+    piano: { pace: 0.45, mood: 0.55, notes: 0.4, melody: 0, beat: 0, tempo: 0.37, tone: 0.45, noise: 0, noiseKind: 0.6 },
+    pads: { pace: 0.6, mood: 0.5, notes: 0.5, melody: 0, beat: 0.45, tempo: 0.37, tone: 0.4, noise: 0, noiseKind: 0.6 },
+    noise: { pace: 0.5, mood: 0.5, notes: 0.5, melody: 0, beat: 0, tempo: 0.37, tone: 0.5, noise: 0.7, noiseKind: 0.7 }
   };
-  var KEYS = ['pace', 'mood', 'notes', 'melody', 'beat', 'tone', 'noise', 'noiseKind'];
+  var KEYS = ['pace', 'mood', 'notes', 'melody', 'beat', 'tempo', 'tone', 'noise', 'noiseKind'];
   var STORE_KEY = 'reading-drift-v1';
-  var BPM = 72;
 
   var store = { mode: 'piano', volume: 0.7, settings: JSON.parse(JSON.stringify(DEFAULTS)) };
   try {
@@ -319,6 +323,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function midiToHz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function bpm() { return Math.round(lerp(50, 110, cur().tempo)); }
 
   // ---------- audio graph ----------
   var ctx = null;
@@ -336,7 +341,10 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     center: 62,
     nextChord: 0,
     nextDrip: 0,
-    melIdx: null,
+    melMidi: null,
+    motif: null,
+    phrasePos: 0,
+    bpm: 0,
     beatOn: false,
     step: 0,
     stepTime: 0,
@@ -655,12 +663,12 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     return node;
   }
 
-  function pianoNote(midi, t, vel) {
-    if (pianoReady) { sampleNote(midi, t, vel); return; }
+  function pianoNote(midi, t, vel, hold, rel) {
+    if (pianoReady) { sampleNote(midi, t, vel, hold, rel); return; }
     synthNote(midi, t, vel);
   }
 
-  function sampleNote(midi, t, vel) {
+  function sampleNote(midi, t, vel, hold, rel) {
     var best = null;
     Object.keys(pianoBufs).forEach(function (k) {
       var n = parseInt(k, 10);
@@ -672,13 +680,14 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     src.playbackRate.value = Math.pow(2, (midi - best) / 12);
     var g = ctx.createGain();
     var level = vel * 3.2;
-    var hold = 5.5;
+    hold = hold || 5.5;
+    rel = rel || 1.5;
     g.gain.setValueAtTime(level, t);
     g.gain.setValueAtTime(level, t + hold);
-    g.gain.linearRampToValueAtTime(0, t + hold + 1.5);
+    g.gain.linearRampToValueAtTime(0, t + hold + rel);
     src.connect(g);
     pannerOr(g).connect(pianoBus);
-    var end = t + hold + 1.6;
+    var end = t + hold + rel + 0.1;
     src.start(t);
     src.stop(end);
     track(g, end, [src]);
@@ -775,8 +784,10 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     padVoice(chord.bass + 12, t, att, hold, rel, 0.06, 'sub');
   }
 
-  function leadNote(midi, t, dur) {
-    var att = 0.35, rel = 1.6, level = 0.032;
+  function leadNote(midi, t, dur, vel) {
+    var att = clamp(dur * 0.3, 0.08, 0.35);
+    var rel = clamp(dur * 0.8 + 0.5, 0.9, 1.6);
+    var level = 0.032 * (vel || 1);
     var holdEnd = t + Math.max(att, dur);
     var end = holdEnd + rel + 0.05;
     var g = ctx.createGain();
@@ -793,7 +804,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     o2.type = 'sine';
     o2.frequency.value = f * 2;
     var g2 = ctx.createGain();
-    g2.gain.value = 0.25;
+    g2.gain.value = 0.12;
     o1.connect(g);
     o2.connect(g2);
     g2.connect(g);
@@ -809,37 +820,129 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     track(g, end, [o1, o2, vib]);
   }
 
+  // ---------- melody ----------
+  // A short motif (a rhythm plus a contour of scale steps) is restated over each chord. Strong
+  // beats land on chord tones, weak beats step between them, and every fourth statement is a
+  // cadence: the 2nd ends open on a chord tone, the 4th settles on the chord's root.
+  var RHYTHMS = [
+    [[4], [2, 2], [3, 1], [2, 1, 1]],
+    [[1, 1, 2], [2, 1, 1], [1, 2, 1], [1.5, 0.5, 1, 1]],
+    [[1, 1, 1, 1], [1.5, 0.5, 1, 1], [1, 0.5, 0.5, 2], [0.5, 0.5, 1, 2]]
+  ];
+  var MEL_RANGE = { piano: { lo: 60, hi: 81, home: 70 }, pads: { lo: 55, hi: 72, home: 64 } };
+
+  function newMotif(amt) {
+    var level = clamp(Math.floor((amt + rnd(-0.2, 0.2)) * 3), 0, 2);
+    var set = RHYTHMS[level];
+    var rhythm = set[Math.floor(Math.random() * set.length)].slice();
+    var iv = [];
+    var dir = Math.random() < 0.5 ? -1 : 1;
+    for (var i = 1; i < rhythm.length; i++) {
+      var r = Math.random();
+      var size = r < 0.62 ? 1 : (r < 0.9 ? 2 : (r < 0.97 ? 3 : 0));
+      if (Math.random() < 0.65) dir = -dir;
+      iv.push(size * dir);
+    }
+    return { rhythm: rhythm, iv: iv };
+  }
+
+  function nearestTo(pool, midi) {
+    var best = 0;
+    for (var j = 1; j < pool.length; j++) {
+      if (Math.abs(pool[j] - midi) < Math.abs(pool[best] - midi)) best = j;
+    }
+    return best;
+  }
+
+  // nearest pool index to `target` whose pitch class is in `pcs`, skipping `avoid`
+  function pickTone(pool, target, pcs, avoid, dir) {
+    for (var d = 0; d < pool.length; d++) {
+      var c = [];
+      [target - d, target + d].forEach(function (j) {
+        if (j >= 0 && j < pool.length && pcs.indexOf(pool[j] % 12) >= 0 && j !== avoid && c.indexOf(j) < 0) c.push(j);
+      });
+      if (c.length === 1) return c[0];
+      if (c.length > 1) return dir > 0 ? c[1] : (dir < 0 ? c[0] : c[Math.floor(Math.random() * 2)]);
+    }
+    return target;
+  }
+
+  function melodyNotes(chord, motif, pos, amt, range) {
+    var pool = [];
+    for (var m = range.lo; m <= range.hi; m++) if (chord.scalePcs.indexOf(m % 12) >= 0) pool.push(m);
+    if (pool.length < 5) return null;
+    var tri = chord.tonesPc.slice(0, 3);
+    var rhythm = motif.rhythm.slice();
+    var iv = motif.iv.slice();
+    if (pos === 2) iv = iv.map(function (x) { return -x; });
+    if (pos === 3 && rhythm.length >= 3) {
+      rhythm.push(rhythm.pop() + rhythm.pop());
+      iv.pop();
+    }
+    var home = nearestTo(pool, range.home);
+    var idx = pickTone(pool, nearestTo(pool, H.melMidi === null ? range.home : H.melMidi), tri, -1, 0);
+    var notes = [];
+    var cum = 0;
+    for (var i = 0; i < rhythm.length; i++) {
+      var strong = cum % 2 === 0;
+      var last = i === rhythm.length - 1;
+      if (i > 0) {
+        var step = iv[i - 1];
+        if (idx > home + 6 && step > 0) step = -step;
+        if (idx < home - 6 && step < 0) step = -step;
+        var target = idx + step;
+        if (target < 0 || target >= pool.length) target = idx - step;
+        target = clamp(target, 0, pool.length - 1);
+        var prevIdx = idx;
+        if (last && pos === 3) idx = pickTone(pool, target, [chord.rootPc], -1, 0);
+        else if (last && pos === 1) idx = pickTone(pool, target, tri.slice(1), prevIdx, step);
+        else if (strong || last) idx = pickTone(pool, target, tri, prevIdx, step);
+        else idx = target;
+      } else if (last && pos === 3) {
+        idx = pickTone(pool, idx, [chord.rootPc], -1, 0);
+      }
+      notes.push({ midi: pool[idx], at: cum, len: rhythm[i], strong: strong, last: last });
+      cum += rhythm[i];
+    }
+    H.melMidi = pool[idx];
+    // thicken with a chord tone a diatonic third below, more often as the slider rises
+    var hAmt = clamp((amt - 0.35) * 1.4, 0, 0.8);
+    var out = [];
+    notes.forEach(function (n) {
+      out.push({ midi: n.midi, at: n.at, len: n.len, vel: n.strong ? 1 : 0.8 });
+      var ni = pool.indexOf(n.midi);
+      var wantsLow = (n.last && pos === 3 && amt > 0.25) || (n.strong && Math.random() < hAmt);
+      if (wantsLow && ni >= 2 && tri.indexOf(n.midi % 12) >= 0 && tri.indexOf(pool[ni - 2] % 12) >= 0) {
+        out.push({ midi: pool[ni - 2], at: n.at, len: n.len, vel: 0.6 });
+      }
+    });
+    return { notes: out, beats: cum };
+  }
+
   function melodyForChord(t, dur, chord) {
     var amt = cur().melody || 0;
     if (amt < 0.03) return;
-    if (Math.random() > lerp(0.45, 1, amt)) return;
-    var pool = [];
-    for (var m = 64; m <= 86; m++) if (chord.scalePcs.indexOf(m % 12) >= 0) pool.push(m);
-    if (!pool.length) return;
-    if (H.melIdx === null || H.melIdx >= pool.length) H.melIdx = Math.floor(pool.length / 2);
-    var count = Math.max(1, Math.round(lerp(1, 7, amt)));
-    var start = t + rnd(0.4, 1.2);
-    var step = (dur * 0.85) / count;
-    for (var i = 0; i < count; i++) {
-      var when = start + i * step + rnd(-0.15, 0.15) * step;
-      if (when > t + dur - 0.5) break;
-      var idx = H.melIdx;
-      if (i === 0) {
-        var bestI = idx, bestD = 99;
-        for (var j = 0; j < pool.length; j++) {
-          if (chord.tonesPc.indexOf(pool[j] % 12) >= 0 && Math.abs(j - idx) < bestD) { bestD = Math.abs(j - idx); bestI = j; }
-        }
-        idx = bestI;
-      } else {
-        var dir = Math.random() < 0.5 ? -1 : 1;
-        var size = Math.random() < amt * 0.3 ? 3 + Math.floor(Math.random() * 2) : (Math.random() < 0.7 ? 1 : 2);
-        if (idx > pool.length * 0.75) dir = -1;
-        else if (idx < pool.length * 0.25) dir = 1;
-        idx = clamp(idx + dir * size, 0, pool.length - 1);
-      }
-      H.melIdx = idx;
-      if (store.mode === 'piano') pianoNote(pool[idx], when, rnd(0.065, 0.09));
-      else leadNote(pool[idx], when, Math.min(step * 1.1, 5));
+    if (Math.random() > lerp(0.5, 1, amt)) return;
+    var piano = store.mode === 'piano';
+    var range = MEL_RANGE[piano ? 'piano' : 'pads'];
+    var beat = 60 / bpm();
+    var end = t + dur;
+    var start = t + beat;
+    for (var rep = 0; rep < 2; rep++) {
+      if (H.phrasePos === 0 || !H.motif) H.motif = newMotif(amt);
+      var seg = melodyNotes(chord, H.motif, H.phrasePos, amt, range);
+      if (!seg) return;
+      H.phrasePos = (H.phrasePos + 1) % 4;
+      var base = start;
+      seg.notes.forEach(function (n) {
+        var when = base + n.at * beat + (piano ? rnd(-0.012, 0.012) : 0);
+        if (when > end - 0.2) return;
+        var len = n.len * beat;
+        if (piano) pianoNote(n.midi, when, rnd(0.08, 0.1) * n.vel, clamp(len * 1.5, 1, 4), 1);
+        else leadNote(n.midi, when, len * 0.9, n.vel);
+      });
+      start += (seg.beats + 1) * beat;
+      if (start + (seg.beats - 0.5) * beat > end || Math.random() > 0.25 + 0.5 * amt) break;
     }
   }
 
@@ -908,7 +1011,7 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     if (b > 0.5 && i === 10 && Math.random() < 0.5) kick(t, 0.5);
     if (b > 0.3 && (i === 4 || i === 12)) snare(t, rnd(0.8, 1));
     if (b > 0.6 && i % 2 === 0) {
-      var swing = (i % 4 === 2) ? (60 / BPM) * 0.06 : 0;
+      var swing = (i % 4 === 2) ? (60 / bpm()) * 0.06 : 0;
       shaker(t + swing, (i % 4 === 0 ? 1 : 0.6) * rnd(0.7, 1));
     }
     if (b > 0.85 && i % 2 === 1 && Math.random() < 0.35) shaker(t, 0.4);
@@ -958,8 +1061,11 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     if (!ctx || !playing) return;
     var now = ctx.currentTime;
     var beatAmt = store.mode === 'pads' ? (cur().beat || 0) : 0;
-    var stepLen = 60 / BPM / 4;
+    var bpmNow = bpm();
+    var stepLen = 60 / bpmNow / 4;
     var barLen = stepLen * 16;
+    if (H.beatOn && H.bpm !== bpmNow) H.barOrigin = H.stepTime - (H.step % 16) * stepLen;
+    H.bpm = bpmNow;
     if (beatAmt > 0.03) {
       if (!H.beatOn) {
         H.beatOn = true;
@@ -1078,15 +1184,21 @@ var PIANO_SAMPLES = {"42": "SUQzAwAAAAAASlRTU0UAAAAwAAAATEFNRSAzMmJpdHMgdmVyc2lv
     KEYS.forEach(function (k) { inputs[k].value = s[k]; });
     inputs.volume.value = store.volume;
     var musical = store.mode !== 'noise';
-    ['pace', 'mood', 'notes', 'melody'].forEach(function (k) {
+    ['pace', 'mood', 'notes', 'melody', 'tempo'].forEach(function (k) {
       document.querySelector('[data-row="' + k + '"]').hidden = !musical;
     });
     document.querySelector('[data-row="beat"]').hidden = store.mode !== 'pads';
+    updateTempoLabel();
+  }
+
+  function updateTempoLabel() {
+    document.getElementById('tempoLabel').textContent = 'Tempo \u00b7 ' + bpm() + ' bpm';
   }
 
   KEYS.forEach(function (k) {
     inputs[k].addEventListener('input', function () {
       cur()[k] = parseFloat(inputs[k].value);
+      if (k === 'tempo') updateTempoLabel();
       save();
       applyAll();
       if (store.mode === 'noise' && playing) showIdle();
